@@ -22,7 +22,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "application.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -53,18 +53,17 @@ UART_HandleTypeDef huart2;
 
 PCD_HandleTypeDef hpcd_USB_FS;
 
-char readBuf[10];
-uint8_t txData;
+uint8_t g_buttCode = 0;
+char readBuf[1];
 __IO ITStatus UartReady = SET;
-RingBuffer txBuf, rxBuf;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN PFP */
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_RTC_Init(void);
-static void MX_USB_PCD_Init(void);
+//static void MX_RTC_Init(void);
+//static void MX_USB_PCD_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USART2_UART_Init(void);
 //extern void MX_GPIO_Init(void);
@@ -72,8 +71,8 @@ static void MX_USART2_UART_Init(void);
 void performCriticalTasks(void);
 void printWelcomeMessage(void);
 uint8_t processUserInput(int8_t opt);
-void clearRxBuffer(void);
-char* readUserInput(void);
+uint8_t readButton1(void); 
+int8_t readUserInput(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -88,10 +87,9 @@ char* readUserInput(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-  char* opt;
-  //uint8_t opt = 0;
 
   /* USER CODE END 1 */
+  //uint8_t opt = 0;
 
   /* MCU Configuration--------------------------------------------------------*/
 
@@ -103,12 +101,18 @@ int main(void)
   /* Configure the system clock */
   SystemClock_Config();
   /* USER CODE BEGIN SysInit */
-
+  /**Configure the Systick interrupt time */
+  HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/1000);
+  /**Configure the Systick */
+  HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);
+  /* SysTick_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
   /* USER CODE END SysInit */
+
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_RTC_Init();
-  MX_USB_PCD_Init();
+  //MX_RTC_Init();
+  //MX_USB_PCD_Init();
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
@@ -119,82 +123,66 @@ int main(void)
   HAL_NVIC_SetPriority(USART2_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(USART2_IRQn);
 
-printMessage:
+  /* Enable GPIOB Pin 7 Button interrupt */
+  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 1, 0);
+  HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
 
-  printWelcomeMessage();
-
-  while (1)  {
-    //char ms[30];
-    opt = readUserInput();
-    //sprintf(ms, "%d", opt);
-    //HAL_UART_Transmit(&huart2, (uint8_t*)ms, strlen(ms), HAL_MAX_DELAY);
-    //HAL_UART_Transmit(&huart2, (uint8_t*)opt , strlen(readBuf), HAL_MAX_DELAY);
-    //HAL_UART_Transmit(&huart2, (uint8_t*)"\r\n", 2, HAL_MAX_DELAY);
-    /*
-    if(opt > 0) {
-      processUserInput(opt);
-      if(opt == 3)
-        goto printMessage;
-    }
-    */
-    //processUserInput(opt);
-    performCriticalTasks();
-    HAL_UART_ErrorCallback(&huart2);
+  /* USER CODE BEGIN 3 */
+  while(1)
+  {
+	  //buttCode = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_7);
+	  //if(GPIO_PIN_RESET == HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_7))
+    if(g_buttCode==1)
+	  {
+		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_RESET);
+		runApplication(&huart2, &huart1);
+    g_buttCode = 0;
+	   	//HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_9);
+	   	//HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_SET);
+	  }
+	  else
+	  {
+		//HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_SET);
+	  }
   }
+
+  /* USER CODE END 3 */
+
 }
 
-uint8_t UART_Transmit(UART_HandleTypeDef *huart, uint8_t *pData, uint16_t len) {
-  if(HAL_UART_Transmit_IT(huart, pData, len) != HAL_OK) {
-    if(RingBuffer_Write(&txBuf, pData, len) != RING_BUFFER_OK)
-      return 0;
-  }
-  return 1;
-}
-
-void clearRxBuffer()
+void EXTI9_5_IRQHandler(void) 
 {
-	int n;
-	int nMax = sizeof(readBuf)-1;
-	for(n=0;n<nMax;n++)
-	{
-		readBuf[n] = '\0';
-	}
+  g_buttCode = 1;
 }
 
- char* readUserInput() {
-  //int8_t retVal = -1;
-  char *retVal;
+uint8_t readButton1(void) 
+{
+  uint8_t buttonResult;
+  buttonResult = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_7);
+  return buttonResult;
+}
+
+int8_t readUserInput(void) {
+  int8_t retVal = -1;
 
   if(UartReady == SET) {
     UartReady = RESET;
-    HAL_UART_Receive_IT(&huart2, (uint8_t*)readBuf, sizeof(readBuf));
-    //retVal = atoi(readBuf);
-    retVal = &readBuf[0];
-    //HAL_UART_Transmit(&huart2, (uint8_t*)retVal , strlen(readBuf), HAL_MAX_DELAY);
-    UART_Transmit(&huart2, (uint8_t*)retVal, strlen(readBuf));
-    //clearRxBuffer();
+    HAL_UART_Receive_IT(&huart2, (uint8_t*)readBuf, 1);
+    retVal = atoi(readBuf);
   }
   return retVal;
-}
-
-void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
-{
-  if(huart->ErrorCode == HAL_UART_ERROR_ORE)
-  {
-    HAL_UART_Receive_IT(&huart2, (uint8_t*)readBuf, sizeof(readBuf));
-  }
 }
 
 
 uint8_t processUserInput(int8_t opt) {
   char msg[30];
 
-  if(!(opt >=1 && opt <= 35))
+  if(!(opt >=1 && opt <= 3))
     return 0;
 
   sprintf(msg, "%d", opt);
-  //HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
-  UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg));
+  HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
 
   switch(opt) {
   case 1:
@@ -203,29 +191,20 @@ uint8_t processUserInput(int8_t opt) {
   case 2:
     sprintf(msg, "\r\nUSER BUTTON status: %s",
         HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_7) == GPIO_PIN_RESET ? "PRESSED" : "RELEASED");
-    //HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
-    UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg));
+    HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
     break;
   case 3:
     return 2;
   };
 
-  //HAL_UART_Transmit(&huart2, (uint8_t*)PROMPT, strlen(PROMPT), HAL_MAX_DELAY);.
-  UART_Transmit(&huart2, (uint8_t*)PROMPT, strlen(PROMPT));
+  HAL_UART_Transmit(&huart2, (uint8_t*)PROMPT, strlen(PROMPT), HAL_MAX_DELAY);
   return 1;
 }
 
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle) {
+//void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle) {
  /* Set transmission flag: transfer complete*/
- UartReady = SET;
-}
-
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
-  if(RingBuffer_GetDataLength(&txBuf) > 0) {
-    RingBuffer_Read(&txBuf, &txData, 1);
-    HAL_UART_Transmit_IT(huart, &txData, 1);
-  }
-}
+// UartReady = SET;
+//}
 
 void performCriticalTasks(void) {
   HAL_Delay(100);
@@ -235,8 +214,7 @@ void printWelcomeMessage(void) {
   char *strings[] = {"\033[0;0H", "\033[2J", WELCOME_MSG, MAIN_MENU, PROMPT};
 
   for (uint8_t i = 0; i < 5; i++) {
-    //HAL_UART_Transmit_IT(&huart2, (uint8_t*)strings[i], strlen(strings[i]));
-    UART_Transmit(&huart2, (uint8_t*)strings[i], strlen(strings[i]));
+    HAL_UART_Transmit_IT(&huart2, (uint8_t*)strings[i], strlen(strings[i]));
     while (HAL_UART_GetState(&huart2) == HAL_UART_STATE_BUSY_TX || HAL_UART_GetState(&huart2) == HAL_UART_STATE_BUSY_TX_RX);
   }
 }
@@ -256,7 +234,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE|RCC_OSCILLATORTYPE_LSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
-  RCC_OscInitStruct.LSEState = RCC_LSE_OFF;
+  RCC_OscInitStruct.LSEState = RCC_LSE_ON;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
@@ -366,7 +344,7 @@ static void MX_USART2_UART_Init(void)
 
   /* USER CODE END USART2_Init 1 */
   huart2.Instance = USART2;
-  huart2.Init.BaudRate = 115200;
+  huart2.Init.BaudRate = 19200;
   huart2.Init.WordLength = UART_WORDLENGTH_8B;
   huart2.Init.StopBits = UART_STOPBITS_1;
   huart2.Init.Parity = UART_PARITY_NONE;
@@ -436,6 +414,9 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_RESET);
 
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+
   /*Configure GPIO pin : PA1 */
   GPIO_InitStruct.Pin = GPIO_PIN_1;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -444,17 +425,19 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PB9 */
-  GPIO_InitStruct.Pin = GPIO_PIN_9;
+  GPIO_InitStruct.Pin = LD2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PB7 */
-  GPIO_InitStruct.Pin = GPIO_PIN_7;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  /*Configure GPIO pin : B1_Pin */
+  GPIO_InitStruct.Pin = B1_Pin;
+  //GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
 }
 
