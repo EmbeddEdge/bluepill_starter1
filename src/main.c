@@ -51,11 +51,13 @@ RTC_HandleTypeDef hrtc;
 
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
+HAL_StatusTypeDef status;
 
 PCD_HandleTypeDef hpcd_USB_FS;
 
 uint8_t g_buttCode = 0;
 char readBuf[1];
+uint8_t rxDataBuffer = 0x0;
 __IO ITStatus UartReady = SET;
 /* USER CODE END PV */
 
@@ -127,6 +129,8 @@ int main(void)
   /* Enable GPIOB Pin 7 Button interrupt */
   HAL_NVIC_SetPriority(EXTI9_5_IRQn, 1, 0);
   HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
+  
+  printWelcomeMessage();
 
   /* USER CODE END 2 */
 
@@ -134,22 +138,36 @@ int main(void)
     /* USER CODE BEGIN 3 */
   while(1)
   {
-	  //buttCode = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_7);
-	  //if(GPIO_PIN_RESET == HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_7))
-    if(g_buttCode==1)
+
+    //Poll uart1
+    status = HAL_UART_Receive(&huart1, &rxDataBuffer, 1, HAL_MAX_DELAY);
+    if(rxDataBuffer<5)
 	  {
-		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_RESET);
-		runApplication(&huart2, &huart1);
-    g_buttCode = 0;
-	   	//HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_9);
-	   	//HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_SET);
+    	HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rGot it\n\r", strlen("\n\rGot it\n\r"), HAL_MAX_DELAY);
+    	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_RESET);
+    	runApplication(&huart2, &huart1);
+    	g_buttCode = 0;
 	  }
 	  else
 	  {
-		//HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_RESET);
-		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_SET);
 	  }
+
+    /*
+    if(g_buttCode==1)
+	  {
+		  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_RESET);
+		  runApplication(&huart2, &huart1);
+      g_buttCode = 0;
+	  }
+	  else
+	  {
+		  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_SET);
+	  }
+    */
+
   }
+  
 
   /* USER CODE END 3 */
 }
@@ -214,13 +232,20 @@ void performCriticalTasks(void) {
   HAL_Delay(100);
 }
 
-void printWelcomeMessage(void) {
+void printWelcomeMessage(void) 
+{
+  HAL_UART_Transmit(&huart1, (uint8_t*)"\033[0;0H", strlen("\033[0;0H"), HAL_MAX_DELAY);
+  HAL_UART_Transmit(&huart1, (uint8_t*)"\033[2J", strlen("\033[2J"), HAL_MAX_DELAY);
+  HAL_UART_Transmit(&huart1, (uint8_t*)WELCOME_MSG, strlen(WELCOME_MSG), HAL_MAX_DELAY);
+  HAL_UART_Transmit(&huart1, (uint8_t*)MAIN_MENU, strlen(MAIN_MENU), HAL_MAX_DELAY);
+  /*
   char *strings[] = {"\033[0;0H", "\033[2J", WELCOME_MSG, MAIN_MENU, PROMPT};
 
   for (uint8_t i = 0; i < 5; i++) {
     HAL_UART_Transmit_IT(&huart2, (uint8_t*)strings[i], strlen(strings[i]));
     while (HAL_UART_GetState(&huart2) == HAL_UART_STATE_BUSY_TX || HAL_UART_GetState(&huart2) == HAL_UART_STATE_BUSY_TX_RX);
   }
+  */
 }
 
 /**
