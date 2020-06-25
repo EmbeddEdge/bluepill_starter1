@@ -57,7 +57,10 @@ PCD_HandleTypeDef hpcd_USB_FS;
 
 uint8_t g_buttCode = 0;
 char readBuf[1];
-uint8_t rxDataBuffer = 0x0;
+char rxDataBuffer[10];
+char txDataBuffer[10];
+uint8_t intrxDataBuffer = 0x0;
+uint8_t inttxDataBuffer = 0x0;
 __IO ITStatus UartReady = SET;
 /* USER CODE END PV */
 
@@ -140,8 +143,8 @@ int main(void)
   {
 
     //Poll uart1
-    status = HAL_UART_Receive(&huart1, &rxDataBuffer, 1, HAL_MAX_DELAY);
-    if(rxDataBuffer<5)
+    status = HAL_UART_Receive(&huart1, (uint8_t*)rxDataBuffer, 1, HAL_MAX_DELAY);
+    if(strcmp(rxDataBuffer[0],'a'== 0))
 	  {
     	HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rGot it\n\r", strlen("\n\rGot it\n\r"), HAL_MAX_DELAY);
     	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_RESET);
