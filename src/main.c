@@ -51,13 +51,14 @@ RTC_HandleTypeDef hrtc;
 
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
-HAL_StatusTypeDef status;
+uint8_t status;
 
 PCD_HandleTypeDef hpcd_USB_FS;
 
 uint8_t g_buttCode = 0;
 char readBuf[1];
-char rxDataBuffer[10];
+char rxDataBuffer[1];
+char rxCapBuffer[10];
 char txDataBuffer[10];
 uint8_t intrxDataBuffer = 0x0;
 uint8_t inttxDataBuffer = 0x0;
@@ -76,9 +77,12 @@ static void MX_USART2_UART_Init(void);
 //extern void MX_USART2_UART_Init(void);
 void performCriticalTasks(void);
 void printWelcomeMessage(void);
-uint8_t processUserInput(int8_t opt);
 uint8_t readButton1(void); 
 int8_t readUserInput(void);
+uint8_t readUserCommand(void);
+uint8_t processUserCommand(uint8_t);
+uint8_t processUserInput(int8_t);
+void clearRxBuffer(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -103,6 +107,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
+  int8_t errCode = 0;
 
   /* USER CODE END Init */
 
@@ -142,19 +147,11 @@ int main(void)
   while(1)
   {
 
-    //Poll uart1
-    status = HAL_UART_Receive(&huart1, (uint8_t*)rxDataBuffer, 1, HAL_MAX_DELAY);
-    if(strcmp(rxDataBuffer[0],'a'== 0))
-	  {
-    	HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rGot it\n\r", strlen("\n\rGot it\n\r"), HAL_MAX_DELAY);
-    	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_RESET);
-    	runApplication(&huart2, &huart1);
-    	g_buttCode = 0;
-	  }
-	  else
-	  {
-		  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_SET);
-	  }
+    //Poll uart1 for a command
+    status = readUserCommand();
+    
+    //Process that command
+    processUserCommand(status);
 
     /*
     if(g_buttCode==1)
@@ -200,6 +197,68 @@ int8_t readUserInput(void) {
 }
 
 
+uint8_t readUserCommand(void) 
+{
+  HAL_StatusTypeDef retVal;
+  uint8_t lineIsValid = 0;
+  //retVal = HAL_UART_Receive(&huart1, (uint8_t*)rxDataBuffer, sizeof(rxDataBuffer), HAL_MAX_DELAY);
+  int i;
+  for(i=0;i<sizeof(rxCapBuffer);i++) //Run through the entire buffer 
+  {
+    retVal = HAL_UART_Receive(&huart1, (uint8_t*)rxDataBuffer, 1, HAL_MAX_DELAY); //Recieve one byte at a time
+    rxCapBuffer[i] = rxDataBuffer[0];
+
+    if(strcmp(rxCapBuffer[i],'\r')==0)
+    {
+      lineIsValid = 1;
+      break;
+    }
+  }
+  return lineIsValid;
+}
+
+// Process the user commmand by checking for a valid line(End with Carriage Return)  
+// and then perform an opertation based on that command
+uint8_t processUserCommand(uint8_t p_status) 
+{
+  uint8_t cmdStatus = 0;
+  if(p_status == 1) //1 = line is valid
+  {
+    if(strcmp(&rxCapBuffer,"ledOn\r")==0)
+    {
+      clearRxBuffer();
+      HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rTurn LED on\n\r", strlen("\n\rTurn LED on\n\r"), HAL_MAX_DELAY);
+    	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_SET);
+    }
+    else if(strcmp(&rxCapBuffer,"ledOff\r")==0)
+    {
+      clearRxBuffer();
+      HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rTurn LED off\n\r", strlen("\n\rTurn LED off\n\r"), HAL_MAX_DELAY);
+      HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_RESET);
+    }
+    else if(strcmp(&rxCapBuffer,"runApp\r")==0)
+    {
+      clearRxBuffer();
+      HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rRun Thingstream Demo\n\r", strlen("\n\rRun Thingstream Demo\n\r"), HAL_MAX_DELAY);
+      HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_SET);
+      runApplication(&huart2, &huart1);
+    }
+    else
+    {
+      clearRxBuffer();
+      HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rError Command\n\r", strlen("\n\rError Command\n\r"), HAL_MAX_DELAY);
+      HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_RESET);
+    }
+    cmdStatus = 1;
+  }
+  else
+  {
+    HAL_UART_Transmit(&huart1, (uint8_t*)"UART ERROR\r\n", strlen("UART ERROR\r\n"), HAL_MAX_DELAY);
+    cmdStatus = 0;
+  }
+  return cmdStatus;
+}
+
 uint8_t processUserInput(int8_t opt) {
   char msg[30];
 
@@ -224,6 +283,15 @@ uint8_t processUserInput(int8_t opt) {
 
   HAL_UART_Transmit(&huart2, (uint8_t*)PROMPT, strlen(PROMPT), HAL_MAX_DELAY);
   return 1;
+}
+
+void clearRxBuffer(void)
+{
+  uint8_t n;
+  for(n=0;n<sizeof(rxCapBuffer);n++)
+  {
+    rxCapBuffer[n] = '\0';
+  } 
 }
 
 //void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle) {
