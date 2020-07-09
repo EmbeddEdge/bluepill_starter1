@@ -46,15 +46,15 @@
 
 
 /* Private variables ---------------------------------------------------------*/
-/* USER CODE BEGIN PV */
 RTC_HandleTypeDef hrtc;
 
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
-uint8_t status;
 
 PCD_HandleTypeDef hpcd_USB_FS;
 
+/* USER CODE BEGIN PV */
+uint8_t status;
 uint8_t g_buttCode = 0;
 char readBuf[1];
 char rxDataBuffer[1];
@@ -66,15 +66,13 @@ __IO ITStatus UartReady = SET;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
-/* USER CODE BEGIN PFP */
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 //static void MX_RTC_Init(void);
 //static void MX_USB_PCD_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USART2_UART_Init(void);
-//extern void MX_GPIO_Init(void);
-//extern void MX_USART2_UART_Init(void);
+/* USER CODE BEGIN PFP */
 void performCriticalTasks(void);
 void printWelcomeMessage(void);
 uint8_t readButton1(void); 
@@ -142,8 +140,8 @@ int main(void)
 
   /* USER CODE END 2 */
 
-
-    /* USER CODE BEGIN 3 */
+   /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
   while(1)
   {
 
@@ -167,11 +165,11 @@ int main(void)
     */
 
   }
-  
 
-  /* USER CODE END 3 */
+  /* USER CODE END WHILE */
 }
 
+/* USER CODE BEGIN 3 */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) 
 {
   if(GPIO_Pin == GPIO_PIN_7)
@@ -318,6 +316,9 @@ void printWelcomeMessage(void)
   }
   */
 }
+  
+
+/* USER CODE END 3 */
 
 /**
   * @brief System Clock Configuration
