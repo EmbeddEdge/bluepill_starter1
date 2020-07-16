@@ -21,10 +21,9 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32f1xx_it.h"
-#include "stm32f1xx.h"
-
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "stm32f1xx.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -58,10 +57,9 @@
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
-extern UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN EV */
-
+extern UART_HandleTypeDef huart2;
 /* USER CODE END EV */
 
 /******************************************************************************/

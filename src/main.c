@@ -44,7 +44,6 @@
 
 /* USER CODE END PM */
 
-
 /* Private variables ---------------------------------------------------------*/
 RTC_HandleTypeDef hrtc;
 
@@ -97,7 +96,6 @@ int main(void)
   /* USER CODE BEGIN 1 */
   //uint8_t opt = 0;
   /* USER CODE END 1 */
-  
 
   /* MCU Configuration--------------------------------------------------------*/
 
@@ -140,7 +138,7 @@ int main(void)
 
   /* USER CODE END 2 */
 
-   /* Infinite loop */
+  /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while(1)
   {
@@ -166,10 +164,10 @@ int main(void)
 
   }
 
-  /* USER CODE END WHILE */
 }
+    /* USER CODE END WHILE */
 
-/* USER CODE BEGIN 3 */
+    /* USER CODE BEGIN 3 */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) 
 {
   if(GPIO_Pin == GPIO_PIN_7)
@@ -318,7 +316,8 @@ void printWelcomeMessage(void)
 }
   
 
-/* USER CODE END 3 */
+  /* USER CODE END 3 */
+
 
 /**
   * @brief System Clock Configuration
@@ -445,7 +444,7 @@ static void MX_USART2_UART_Init(void)
 
   /* USER CODE END USART2_Init 1 */
   huart2.Instance = USART2;
-  huart2.Init.BaudRate = 19200;
+  huart2.Init.BaudRate = 115200;
   huart2.Init.WordLength = UART_WORDLENGTH_8B;
   huart2.Init.StopBits = UART_STOPBITS_1;
   huart2.Init.Parity = UART_PARITY_NONE;
@@ -524,8 +523,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : PB12 */
+  GPIO_InitStruct.Pin = GPIO_PIN_12;
+  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
   /*Configure GPIO pin : PB7 */
-  //GPIO_InitStruct.Pin = GPIO_PIN_7;
+  GPIO_InitStruct.Pin = GPIO_PIN_7;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
@@ -536,7 +540,7 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   //GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);  
 
   /*Configure GPIO pin : PB9 */
   GPIO_InitStruct.Pin = LD2_Pin;
