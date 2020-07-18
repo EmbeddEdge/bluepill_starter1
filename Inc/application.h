@@ -36,6 +36,8 @@ extern "C" {
  *                   If NULL, then no debug output
  */
 extern void runApplication(UART_HandleTypeDef *modem_uart, UART_HandleTypeDef *debug_uart);
+extern Client* setupTSStack(UART_HandleTypeDef *modem_uart, UART_HandleTypeDef *debug_uart);
+extern void publishMessage(UART_HandleTypeDef *modem_uart, UART_HandleTypeDef *debug_uart, Client* p_client);
 
 #if defined(__cplusplus)
 }

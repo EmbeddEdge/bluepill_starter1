@@ -171,6 +171,99 @@ error:
     return;
 }
 
+/*
+ * Create the Thingstream stack to publish a message.
+ * @param modem_uart A handle to the serial port to use for the modem
+ * @param debug_uart A handle to the serial port to use for debug output.
+ *                   If NULL, then no debug output
+ */
+Client* setupTSStack(UART_HandleTypeDef *modem_uart, UART_HandleTypeDef *debug_uart)
+{
+    debug_output = debug_uart;  /* setup uart handle for debug output */
+
+    Transport* transport = serial_transport_create(modem_uart);
+    CHECK("serial", transport != NULL);
+
+    transport = line_buffer_transport_create(transport, line_buffer, LINE_BUFFER_LENGTH);
+    CHECK("linebuf", transport != NULL);
+
+#if (defined(DEBUG_LOG_MODEM) && (DEBUG_LOG_MODEM > 0))
+    transport = log_modem_transport_create(transport, debug_printf, 0xFF);
+    CHECK("log_modem", transport != NULL);
+#endif /* DEBUG_LOG_MODEM */
+
+    Transport* modem = modem_transport_create(transport, 0);
+    CHECK("modem", modem != NULL);
+
+    transport = base64_codec_create(modem);
+    CHECK("base64", transport != NULL);
+
+    transport = thingstream_transport_create(transport, thingstream_buffer, THINGSTREAM_BUFFER_LENGTH);
+    CHECK("thingstream", transport != NULL);
+
+#if (defined(DEBUG_LOG_CLIENT) && (DEBUG_LOG_CLIENT > 0))
+    transport = log_client_transport_create(transport, debug_printf, 0xFF);
+    CHECK("log_client", transport != NULL);
+#endif /* DEBUG_LOG_CLIENT */
+
+    Client* client = Client_create(transport, NULL);
+    CHECK("client", client != NULL);
+    return client;
+
+error:
+    return client;
+}
+
+/*
+ * Use the Thingstream stack to publish a message.
+ * @param modem_uart A handle to the serial port to use for the modem
+ * @param debug_uart A handle to the serial port to use for debug output.
+ *                   If NULL, then no debug output
+ */
+void publishMessage(UART_HandleTypeDef *modem_uart, UART_HandleTypeDef *debug_uart, Client* p_client)
+{
+    debug_output = debug_uart;  /* setup uart handle for debug output */
+
+    if (p_client != NULL)
+    {
+        Topic topic;
+        ClientResult cr;
+
+        cr = Client_connect(p_client, true, NULL, NULL);
+        CHECK("connect", cr == CLIENT_SUCCESS);
+
+        /* Registration is redundant here, since subscribeName can
+         * also return the Id.
+         * Typical applications might not subscribe to topics they
+         * publish to, so this is included here for illustration.
+         */
+        cr = Client_register(p_client, EXAMPLE_TOPIC, &topic);
+        CHECK("register", cr == CLIENT_SUCCESS);
+        exampleTopicId = topic.topicId;
+
+        Client_set_subscribe_callback(p_client, receiveCallback, NULL);
+
+        /* subscribe to the same message to receive it back by the server */
+        cr = Client_subscribeName(p_client, EXAMPLE_TOPIC, MQTT_QOS1, NULL);
+        CHECK("subscribe", cr == CLIENT_SUCCESS);
+
+        char *msg = "Hello from STM32";
+        cr = Client_publish(p_client, topic, MQTT_QOS1, false, (uint8_t*) msg, strlen(msg), NULL);
+        CHECK("publish", cr == CLIENT_SUCCESS);
+
+        while (!done)
+        {
+            /* poll for incoming messages */
+            Client_run(p_client, 1000);
+        }
+        cr = Client_disconnect(p_client, 0);
+        CHECK("disconnect", cr == CLIENT_SUCCESS);
+    }
+
+error:
+    return;
+}
+
 #if defined(__cplusplus)
 }
 #endif

@@ -35,6 +35,7 @@ extern "C" {
 #include "ringbuffer.h"
 #include <string.h>
 #include <stdlib.h>
+#include "client_api.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/

@@ -142,25 +142,21 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while(1)
   {
+    /*
+    if(g_buttCode==1)
+	  {
+      HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rButton 1 has been pressed\n\r", strlen("\n\rButton 1 has been pressed\n\r"), HAL_MAX_DELAY);
+		  //HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_RESET);
+		  //runApplication(&huart2, &huart1);
+      g_buttCode = 0;
+	  }
+    */
 
     //Poll uart1 for a command
     status = readUserCommand();
     
     //Process that command
     processUserCommand(status);
-
-    /*
-    if(g_buttCode==1)
-	  {
-		  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_RESET);
-		  runApplication(&huart2, &huart1);
-      g_buttCode = 0;
-	  }
-	  else
-	  {
-		  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_SET);
-	  }
-    */
 
   }
 
@@ -220,6 +216,7 @@ uint8_t processUserCommand(uint8_t p_status)
   uint8_t cmdStatus = 0;
   if(p_status == 1) //1 = line is valid
   {
+    Client* g_client;
     if(strcmp(&rxCapBuffer,"ledOn\r")==0)
     {
       clearRxBuffer();
@@ -231,6 +228,18 @@ uint8_t processUserCommand(uint8_t p_status)
       clearRxBuffer();
       HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rTurn LED off\n\r", strlen("\n\rTurn LED off\n\r"), HAL_MAX_DELAY);
       HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_RESET);
+    }
+    else if(strcmp(&rxCapBuffer,"connect\r")==0)
+    {
+      clearRxBuffer();
+      HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rClient connection check\n\r", strlen("\n\rClient connection check\n\r"), HAL_MAX_DELAY);
+      g_client = setupTSStack(&huart2, &huart1);
+    }
+    else if(strcmp(&rxCapBuffer,"pub\r")==0)
+    {
+      clearRxBuffer();
+      HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rPublish Message\n\r", strlen("\n\rPublish Message\n\r"), HAL_MAX_DELAY);
+      publishMessage(&huart2, &huart1, &g_client);
     }
     else if(strcmp(&rxCapBuffer,"runApp\r")==0)
     {
