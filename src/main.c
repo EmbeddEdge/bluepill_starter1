@@ -17,6 +17,7 @@
   ******************************************************************************
   */
 /* USER CODE END Header */
+
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
@@ -43,9 +44,7 @@
 
 /* USER CODE END PM */
 
-
 /* Private variables ---------------------------------------------------------*/
-/* USER CODE BEGIN PV */
 RTC_HandleTypeDef hrtc;
 
 UART_HandleTypeDef huart1;
@@ -53,22 +52,22 @@ UART_HandleTypeDef huart2;
 
 PCD_HandleTypeDef hpcd_USB_FS;
 
+/* USER CODE BEGIN PV */
 char readBuf[10];
 uint8_t txData;
 __IO ITStatus UartReady = SET;
 RingBuffer txBuf, rxBuf;
+GPIO_PinState b1State;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
-/* USER CODE BEGIN PFP */
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_RTC_Init(void);
 static void MX_USB_PCD_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USART2_UART_Init(void);
-//extern void MX_GPIO_Init(void);
-//extern void MX_USART2_UART_Init(void);
+/* USER CODE BEGIN PFP */
 void performCriticalTasks(void);
 void printWelcomeMessage(void);
 uint8_t processUserInput(int8_t opt);
@@ -97,14 +96,18 @@ int main(void)
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
+
   /* USER CODE BEGIN Init */
 
   /* USER CODE END Init */
+
   /* Configure the system clock */
   SystemClock_Config();
+
   /* USER CODE BEGIN SysInit */
 
   /* USER CODE END SysInit */
+
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_RTC_Init();
@@ -112,20 +115,32 @@ int main(void)
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-
-  /* USER CODE END 2 */
-
   /* Enable USART2 interrupt */
   HAL_NVIC_SetPriority(USART2_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(USART2_IRQn);
 
-printMessage:
+  printMessage:
 
   printWelcomeMessage();
 
-  while (1)  {
+  /* USER CODE END 2 */
+
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
+  while (1)
+  {
+    b1State = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_7);
+
+    if(b1State == GPIO_PIN_RESET) //Since pullup is used this returns true if the button is pressed
+    {
+      HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_SET);
+    }
+    else
+    {
+      HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_RESET);
+    }
     //char ms[30];
-    opt = readUserInput();
+    //opt = readUserInput();
     //sprintf(ms, "%d", opt);
     //HAL_UART_Transmit(&huart2, (uint8_t*)ms, strlen(ms), HAL_MAX_DELAY);
     //HAL_UART_Transmit(&huart2, (uint8_t*)opt , strlen(readBuf), HAL_MAX_DELAY);
@@ -138,10 +153,14 @@ printMessage:
     }
     */
     //processUserInput(opt);
-    performCriticalTasks();
-    HAL_UART_ErrorCallback(&huart2);
+    //performCriticalTasks();
+    //HAL_UART_ErrorCallback(&huart2);
   }
+  /* USER CODE END WHILE */
+  
 }
+
+/* USER CODE BEGIN 3 */
 
 uint8_t UART_Transmit(UART_HandleTypeDef *huart, uint8_t *pData, uint16_t len) {
   if(HAL_UART_Transmit_IT(huart, pData, len) != HAL_OK) {
@@ -240,6 +259,8 @@ void printWelcomeMessage(void) {
     while (HAL_UART_GetState(&huart2) == HAL_UART_STATE_BUSY_TX || HAL_UART_GetState(&huart2) == HAL_UART_STATE_BUSY_TX_RX);
   }
 }
+
+/* USER CODE END 3 */
 
 /**
   * @brief System Clock Configuration
@@ -414,7 +435,6 @@ static void MX_USB_PCD_Init(void)
 
 }
 
-
 /**
   * @brief GPIO Initialization Function
   * @param None
@@ -443,17 +463,17 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : PB7 */
+  GPIO_InitStruct.Pin = GPIO_PIN_7;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
   /*Configure GPIO pin : PB9 */
   GPIO_InitStruct.Pin = GPIO_PIN_9;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : PB7 */
-  GPIO_InitStruct.Pin = GPIO_PIN_7;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
 }
@@ -474,32 +494,21 @@ void Error_Handler(void)
   /* USER CODE END Error_Handler_Debug */
 }
 
-#ifdef USE_FULL_ASSERT
-
+#ifdef  USE_FULL_ASSERT
 /**
-   * @brief Reports the name of the source file and the source line number
-   * where the assert_param error has occurred.
-   * @param file: pointer to the source file name
-   * @param line: assert_param error line source number
-   * @retval None
-   */
-void assert_failed(uint8_t* file, uint32_t line)
-{
+  * @brief  Reports the name of the source file and the source line number
+  *         where the assert_param error has occurred.
+  * @param  file: pointer to the source file name
+  * @param  line: assert_param error line source number
+  * @retval None
+  */
+void assert_failed(uint8_t *file, uint32_t line)
+{ 
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
   /* USER CODE END 6 */
-
 }
-
-#endif
-
-/**
-  * @}
-  */
-
-/**
-  * @}
-*/
+#endif /* USE_FULL_ASSERT */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
