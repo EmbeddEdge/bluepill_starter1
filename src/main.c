@@ -133,12 +133,10 @@ int main(void)
 
     if(b1State == GPIO_PIN_RESET) //Since pullup is used this returns true if the button is pressed
     {
-      //Light up the LED
       HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_SET);
     }
     else
     {
-      //Turn off the LED
       HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_RESET);
     }
     //char ms[30];
