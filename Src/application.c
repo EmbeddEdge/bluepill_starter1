@@ -172,7 +172,7 @@ error:
 }
 
 /*
- * Create the Thingstream stack to publish a message.
+ * Setup and create the Thingstream stack
  * @param modem_uart A handle to the serial port to use for the modem
  * @param debug_uart A handle to the serial port to use for debug output.
  *                   If NULL, then no debug output
@@ -208,21 +208,21 @@ Client* setupTSStack(UART_HandleTypeDef *modem_uart, UART_HandleTypeDef *debug_u
 
     Client* client = Client_create(transport, NULL);
     CHECK("client", client != NULL);
+
     return client;
 
 error:
-    return client;
+    return;
 }
 
 /*
  * Use the Thingstream stack to publish a message.
- * @param modem_uart A handle to the serial port to use for the modem
+ * @param p_client A Client instance that was configured in a previous function
  * @param debug_uart A handle to the serial port to use for debug output.
  *                   If NULL, then no debug output
  */
-void publishMessage(UART_HandleTypeDef *modem_uart, UART_HandleTypeDef *debug_uart, Client* p_client)
+void publishMessage(Client* p_client, char* p_msg)
 {
-    debug_output = debug_uart;  /* setup uart handle for debug output */
 
     if (p_client != NULL)
     {
@@ -247,8 +247,8 @@ void publishMessage(UART_HandleTypeDef *modem_uart, UART_HandleTypeDef *debug_ua
         cr = Client_subscribeName(p_client, EXAMPLE_TOPIC, MQTT_QOS1, NULL);
         CHECK("subscribe", cr == CLIENT_SUCCESS);
 
-        char *msg = "Hello from STM32";
-        cr = Client_publish(p_client, topic, MQTT_QOS1, false, (uint8_t*) msg, strlen(msg), NULL);
+        //char *msg = "Hello from STM32";
+        cr = Client_publish(p_client, topic, MQTT_QOS1, false, (uint8_t*) p_msg, strlen(p_msg), NULL);
         CHECK("publish", cr == CLIENT_SUCCESS);
 
         while (!done)

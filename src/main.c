@@ -53,11 +53,12 @@ UART_HandleTypeDef huart2;
 PCD_HandleTypeDef hpcd_USB_FS;
 
 /* USER CODE BEGIN PV */
+Client* g_client;
 uint8_t status;
 uint8_t g_buttCode = 0;
 char readBuf[1];
 char rxDataBuffer[1];
-char rxCapBuffer[10];
+char rxCapBuffer[20];
 char txDataBuffer[10];
 uint8_t intrxDataBuffer = 0x0;
 uint8_t inttxDataBuffer = 0x0;
@@ -193,6 +194,8 @@ uint8_t readUserCommand(void)
 {
   HAL_StatusTypeDef retVal;
   uint8_t lineIsValid = 0;
+  char cr = '\r';
+  char nl = '\n';
   //retVal = HAL_UART_Receive(&huart1, (uint8_t*)rxDataBuffer, sizeof(rxDataBuffer), HAL_MAX_DELAY);
   int i;
   for(i=0;i<sizeof(rxCapBuffer);i++) //Run through the entire buffer 
@@ -200,7 +203,7 @@ uint8_t readUserCommand(void)
     retVal = HAL_UART_Receive(&huart1, (uint8_t*)rxDataBuffer, 1, HAL_MAX_DELAY); //Recieve one byte at a time
     rxCapBuffer[i] = rxDataBuffer[0];
 
-    if(strcmp(rxCapBuffer[i],'\r')==0)
+    if(rxCapBuffer[i-1]==cr && rxCapBuffer[i]==nl)
     {
       lineIsValid = 1;
       break;
@@ -214,39 +217,74 @@ uint8_t readUserCommand(void)
 uint8_t processUserCommand(uint8_t p_status) 
 {
   uint8_t cmdStatus = 0;
+  char* userCMD;
+
+  userCMD = strtok(rxCapBuffer, " ");
+
   if(p_status == 1) //1 = line is valid
   {
-    Client* g_client;
-    if(strcmp(&rxCapBuffer,"ledOn\r")==0)
+    if(strcmp(userCMD,"ledOn\r\n")==0)
     {
       clearRxBuffer();
       HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rTurn LED on\n\r", strlen("\n\rTurn LED on\n\r"), HAL_MAX_DELAY);
     	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_SET);
     }
-    else if(strcmp(&rxCapBuffer,"ledOff\r")==0)
+    else if(strcmp(userCMD,"ledOff\r\n")==0)
     {
       clearRxBuffer();
       HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rTurn LED off\n\r", strlen("\n\rTurn LED off\n\r"), HAL_MAX_DELAY);
       HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_RESET);
     }
-    else if(strcmp(&rxCapBuffer,"connect\r")==0)
+    else if(strcmp(userCMD,"connect\r\n")==0)
     {
       clearRxBuffer();
       HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rClient connection check\n\r", strlen("\n\rClient connection check\n\r"), HAL_MAX_DELAY);
       g_client = setupTSStack(&huart2, &huart1);
     }
-    else if(strcmp(&rxCapBuffer,"pub\r")==0)
+    else if(strcmp(userCMD,"publish\r\n")==0)
     {
       clearRxBuffer();
       HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rPublish Message\n\r", strlen("\n\rPublish Message\n\r"), HAL_MAX_DELAY);
-      publishMessage(&huart2, &huart1, &g_client);
+      publishMessage(g_client, "Hello From Device1");
     }
-    else if(strcmp(&rxCapBuffer,"runApp\r")==0)
+    else if(strcmp(userCMD,"runApp\r\n")==0)
     {
       clearRxBuffer();
       HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rRun Thingstream Demo\n\r", strlen("\n\rRun Thingstream Demo\n\r"), HAL_MAX_DELAY);
       HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_SET);
       runApplication(&huart2, &huart1);
+    }
+    else if(strcmp(userCMD,"ShowInfo\r\n")==0)
+    {
+      clearRxBuffer();
+      HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rDisplay some info\n\r", strlen("\n\rDisplay some info\n\r"), HAL_MAX_DELAY);
+      HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_SET);
+    }
+    else if(strcmp(userCMD,"Send")==0)
+    {
+      
+      //HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rThe Command param is: \n\r", strlen("\n\rThe Command param is: \n\r"), HAL_MAX_DELAY);
+      uint8_t count = 0;
+      while (userCMD != NULL)
+      {
+        if (count == 1) 
+        {
+          publishMessage(g_client, userCMD);
+          /*
+          if(strcmp(userCMD,"par1\r\n")==0)
+          {
+            HAL_UART_Transmit(&huart1, (uint8_t*)"Par1\n\r", strlen("Par1\n\r"), HAL_MAX_DELAY);
+          }
+          else if(strcmp(userCMD,"par2\r\n")==0)
+          {
+            HAL_UART_Transmit(&huart1, (uint8_t*)"Par2\n\r", strlen("Par2\n\r"), HAL_MAX_DELAY);
+          }
+          */
+        }
+        userCMD = strtok(NULL, " ");  //Go to next string in command buffer
+        ++count;
+      }
+      clearRxBuffer();
     }
     else
     {
