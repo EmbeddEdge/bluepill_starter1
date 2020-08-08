@@ -212,7 +212,7 @@ Client* setupTSStack(UART_HandleTypeDef *modem_uart, UART_HandleTypeDef *debug_u
     return client;
 
 error:
-    return;
+    return NULL;
 }
 
 /*
@@ -255,6 +255,41 @@ void publishMessage(Client* p_client, char* p_msg)
         {
             /* poll for incoming messages */
             Client_run(p_client, 1000);
+        }
+        cr = Client_disconnect(p_client, 0);
+        CHECK("disconnect", cr == CLIENT_SUCCESS);
+    }
+
+error:
+    return;
+}
+
+/*
+ * Wait to recieve a message.
+ * @param p_client A Client instance that was configured in a previous function
+ */
+void waitForMessage(Client* p_client)
+{
+
+    if (p_client != NULL)
+    {
+        Topic topic;
+        ClientResult cr;
+
+        cr = Client_connect(p_client, true, NULL, NULL);
+        CHECK("connect", cr == CLIENT_SUCCESS);
+
+        Client_set_subscribe_callback(p_client, receiveCallback, NULL);
+
+        /* subscribe to the same message to receive it back by the server */
+        cr = Client_subscribeName(p_client, EXAMPLE_TOPIC, MQTT_QOS1, &topic);
+        CHECK("subscribe", cr == CLIENT_SUCCESS);
+        exampleTopicId = topic.topicId;
+
+        while (!done)
+        {
+            /* poll for incoming messages */
+            Client_run(p_client, 10000);
         }
         cr = Client_disconnect(p_client, 0);
         CHECK("disconnect", cr == CLIENT_SUCCESS);

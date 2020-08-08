@@ -286,6 +286,12 @@ uint8_t processUserCommand(uint8_t p_status)
       }
       clearRxBuffer();
     }
+    else if(strcmp(userCMD,"wait\r\n")==0)
+    {
+      clearRxBuffer();
+      HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rwait for a message to be sent\n\r", strlen("\n\rwait for a message to be sent\n\r"), HAL_MAX_DELAY);
+      waitForMessage(g_client);
+    }
     else
     {
       clearRxBuffer();
