@@ -40,7 +40,7 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-
+#define LINEMAX 3 // Maximal allowed/expected line length
 /* USER CODE END PM */
 
 
@@ -53,7 +53,10 @@ UART_HandleTypeDef huart2;
 
 PCD_HandleTypeDef hpcd_USB_FS;
 
-char readBuf[10];
+char readBuf[4];
+//char dispBuf[LINEMAX];
+char dispBuf[LINEMAX + 1]; // Holding buffer with space for terminating NUL
+volatile int lineValid = 0;
 uint8_t txData;
 __IO ITStatus UartReady = SET;
 RingBuffer txBuf, rxBuf;
@@ -71,9 +74,10 @@ static void MX_USART2_UART_Init(void);
 //extern void MX_USART2_UART_Init(void);
 void performCriticalTasks(void);
 void printWelcomeMessage(void);
-uint8_t processUserInput(int8_t opt);
+uint8_t processUserInput(void);
 void clearRxBuffer(void);
-char* readUserInput(void);
+void readUserInput(void);
+void readUserInputByByte(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -88,7 +92,7 @@ char* readUserInput(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-  char* opt;
+  int err;
   //uint8_t opt = 0;
 
   /* USER CODE END 1 */
@@ -119,25 +123,20 @@ int main(void)
   HAL_NVIC_SetPriority(USART2_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(USART2_IRQn);
 
+
+
 printMessage:
 
   printWelcomeMessage();
 
   while (1)  {
-    //char ms[30];
-    opt = readUserInput();
-    //sprintf(ms, "%d", opt);
-    //HAL_UART_Transmit(&huart2, (uint8_t*)ms, strlen(ms), HAL_MAX_DELAY);
-    //HAL_UART_Transmit(&huart2, (uint8_t*)opt , strlen(readBuf), HAL_MAX_DELAY);
-    //HAL_UART_Transmit(&huart2, (uint8_t*)"\r\n", 2, HAL_MAX_DELAY);
-    /*
-    if(opt > 0) {
-      processUserInput(opt);
-      if(opt == 3)
-        goto printMessage;
+    readUserInput();
+
+    err = processUserInput();
+    if(err == 2)
+    {
+      goto printMessage;
     }
-    */
-    //processUserInput(opt);
     performCriticalTasks();
     HAL_UART_ErrorCallback(&huart2);
   }
@@ -154,27 +153,55 @@ uint8_t UART_Transmit(UART_HandleTypeDef *huart, uint8_t *pData, uint16_t len) {
 void clearRxBuffer()
 {
 	int n;
-	int nMax = sizeof(readBuf)-1;
+	int nMax = sizeof(readBuf);
 	for(n=0;n<nMax;n++)
 	{
 		readBuf[n] = '\0';
 	}
 }
 
- char* readUserInput() {
-  //int8_t retVal = -1;
-  char *retVal;
+ void readUserInput() {
 
   if(UartReady == SET) {
     UartReady = RESET;
     HAL_UART_Receive_IT(&huart2, (uint8_t*)readBuf, sizeof(readBuf));
-    //retVal = atoi(readBuf);
-    retVal = &readBuf[0];
-    //HAL_UART_Transmit(&huart2, (uint8_t*)retVal , strlen(readBuf), HAL_MAX_DELAY);
-    UART_Transmit(&huart2, (uint8_t*)retVal, strlen(readBuf));
-    //clearRxBuffer();
+    strcpy(dispBuf,readBuf);
+    if(dispBuf[0] != '\0')
+    {
+    	lineValid = 1;
+    }
+    clearRxBuffer();
   }
-  return retVal;
+}
+
+void readUserInputByByte() {
+  static char rxLBuf[LINEMAX];			//Local holding buffer to build the line
+  static int rxLBufIndex = -1;
+
+  if(UartReady == SET) {
+    UartReady = RESET;
+    HAL_UART_Receive_IT(&huart2, (uint8_t*)readBuf, sizeof(readBuf));
+
+    if((readBuf[0] == '\r') || (readBuf[0] == '\n'))
+    {
+    	if(rxLBufIndex != 0)
+    	{
+    		memcpy((void*)dispBuf, rxLBuf, rxLBufIndex); //Copy to static dispBuf from dynamic rxLBuf
+    	    dispBuf[rxLBufIndex] = 0; //Add terminating NULL
+    	    lineValid = 1;
+    	    rxLBufIndex = 0;
+    	}
+    }
+    else
+    {
+    	if((readBuf[0] == '$') || (rxLBufIndex == LINEMAX))
+    	{
+    		rxLBufIndex = 0;
+    	}
+    	rxLBuf[rxLBufIndex++] = readBuf[0];
+    }
+  }
+  //return retVal;
 }
 
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
@@ -186,33 +213,52 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 }
 
 
-uint8_t processUserInput(int8_t opt) {
+uint8_t processUserInput() {
+  char faultMsg[] = "Invalid Line\r\n";
   char msg[30];
+  int errCode = 1;
 
-  if(!(opt >=1 && opt <= 35))
-    return 0;
-
-  sprintf(msg, "%d", opt);
-  //HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
-  UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg));
-
-  switch(opt) {
-  case 1:
-    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_9);
-    break;
-  case 2:
-    sprintf(msg, "\r\nUSER BUTTON status: %s",
-        HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_7) == GPIO_PIN_RESET ? "PRESSED" : "RELEASED");
-    //HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
-    UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg));
-    break;
-  case 3:
-    return 2;
-  };
-
-  //HAL_UART_Transmit(&huart2, (uint8_t*)PROMPT, strlen(PROMPT), HAL_MAX_DELAY);.
-  UART_Transmit(&huart2, (uint8_t*)PROMPT, strlen(PROMPT));
-  return 1;
+  //First check if the line of bytes received from the uart interrupt is
+  if(lineValid == 1)
+  {
+	  if(dispBuf[3] == '\r')
+	    {
+	  	  UART_Transmit(&huart2, (uint8_t*)dispBuf, strlen(dispBuf));
+	  	  UART_Transmit(&huart2, (uint8_t*)PROMPT, strlen(PROMPT));
+	  	  if(strcmp(dispBuf, "led\r")==0)
+	  	  {
+	  		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_9);
+	  	  }
+	  	  else if(strcmp(dispBuf, "lon\r")==0)
+	  	  {
+	  		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_SET);
+	  	  }
+	  	  else if(strcmp(dispBuf, "off\r")==0)
+	  	  {
+	  	    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_RESET);
+	  	  }
+        else if(strcmp(dispBuf, "pin\r")==0)
+	  	  {
+	  	    sprintf(msg, "\r\nUSER BUTTON status: %s",
+            HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_7) == GPIO_PIN_RESET ? "PRESSED" : "RELEASED");
+            //HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
+            UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg));
+	  	  }
+        else if(strcmp(dispBuf, "res\r")==0)
+	  	  {
+	  	    errCode = 2;
+	  	  }
+	    }
+	    else
+	    {
+	  	  HAL_UART_Transmit(&huart2, (uint8_t*)faultMsg, strlen(faultMsg), HAL_MAX_DELAY);
+	  	  UART_Transmit(&huart2, (uint8_t*)PROMPT, strlen(PROMPT));
+	    }
+	  lineValid = 0;
+	  clearRxBuffer();
+  }
+  //HAL_UART_Transmit(&huart2, (uint8_t*)PROMPT, strlen(PROMPT), HAL_MAX_DELAY);
+  return errCode;
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle) {
