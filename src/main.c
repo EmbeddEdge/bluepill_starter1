@@ -151,6 +151,7 @@ int main(void)
   /* definition and creation of defaultTask */
   osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
   defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
+  // A comment
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
