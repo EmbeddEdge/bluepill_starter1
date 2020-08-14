@@ -1,6 +1,7 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?><projectDescription>
+<?xml version="1.0" encoding="UTF-8"?>
+<projectDescription>
 	<name>bluepill_config</name>
-	<comment/>
+	<comment />
 	<projects>
 	</projects>
 	<buildSpec>
@@ -14,7 +15,7 @@
 				</dictionary>
 				<dictionary>
 					<key>?name?</key>
-					<value/>
+					<value />
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.append_environment</key>
@@ -22,7 +23,7 @@
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.buildArguments</key>
-					<value/>
+					<value />
 				</dictionary>
 				<dictionary>
 					<key>org.eclipse.cdt.make.core.buildCommand</key>
@@ -220,5 +221,57 @@
 			<type>1</type>
 			<location>PARENT-2-PROJECT_LOC/Src/system_stm32f1xx.c</location>
 		</link>
-  </linkedResources>
+  <link>
+      <name>Application/User/freertos.c</name>
+      <type>1</type>
+      <location>PARENT-2-PROJECT_LOC/Src/freertos.c</location>
+    </link><link>
+      <name>Application/User/stm32f1xx_hal_timebase_tim.c</name>
+      <type>1</type>
+      <location>PARENT-2-PROJECT_LOC/Src/stm32f1xx_hal_timebase_tim.c</location>
+    </link><link>
+      <name>Middlewares</name>
+      <type>2</type>
+      <locationURI>virtual:/virtual</locationURI>
+    </link><link>
+      <name>Middlewares/FreeRTOS</name>
+      <type>2</type>
+      <locationURI>virtual:/virtual</locationURI>
+    </link><link>
+      <name>Middlewares/FreeRTOS/croutine.c</name>
+      <type>1</type>
+      <location>PARENT-2-PROJECT_LOC/Middlewares/Third_Party/FreeRTOS/Source/croutine.c</location>
+    </link><link>
+      <name>Middlewares/FreeRTOS/event_groups.c</name>
+      <type>1</type>
+      <location>PARENT-2-PROJECT_LOC/Middlewares/Third_Party/FreeRTOS/Source/event_groups.c</location>
+    </link><link>
+      <name>Middlewares/FreeRTOS/list.c</name>
+      <type>1</type>
+      <location>PARENT-2-PROJECT_LOC/Middlewares/Third_Party/FreeRTOS/Source/list.c</location>
+    </link><link>
+      <name>Middlewares/FreeRTOS/queue.c</name>
+      <type>1</type>
+      <location>PARENT-2-PROJECT_LOC/Middlewares/Third_Party/FreeRTOS/Source/queue.c</location>
+    </link><link>
+      <name>Middlewares/FreeRTOS/tasks.c</name>
+      <type>1</type>
+      <location>PARENT-2-PROJECT_LOC/Middlewares/Third_Party/FreeRTOS/Source/tasks.c</location>
+    </link><link>
+      <name>Middlewares/FreeRTOS/timers.c</name>
+      <type>1</type>
+      <location>PARENT-2-PROJECT_LOC/Middlewares/Third_Party/FreeRTOS/Source/timers.c</location>
+    </link><link>
+      <name>Middlewares/FreeRTOS/cmsis_os.c</name>
+      <type>1</type>
+      <location>PARENT-2-PROJECT_LOC/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.c</location>
+    </link><link>
+      <name>Middlewares/FreeRTOS/heap_4.c</name>
+      <type>1</type>
+      <location>PARENT-2-PROJECT_LOC/Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c</location>
+    </link><link>
+      <name>Middlewares/FreeRTOS/port.c</name>
+      <type>1</type>
+      <location>PARENT-2-PROJECT_LOC/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM3/port.c</location>
+    </link></linkedResources>
 </projectDescription>

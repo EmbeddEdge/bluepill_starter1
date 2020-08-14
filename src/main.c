@@ -17,8 +17,10 @@
   ******************************************************************************
   */
 /* USER CODE END Header */
+
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "cmsis_os.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -43,9 +45,7 @@
 #define LINEMAX 3 // Maximal allowed/expected line length
 /* USER CODE END PM */
 
-
 /* Private variables ---------------------------------------------------------*/
-/* USER CODE BEGIN PV */
 RTC_HandleTypeDef hrtc;
 
 UART_HandleTypeDef huart1;
@@ -53,6 +53,8 @@ UART_HandleTypeDef huart2;
 
 PCD_HandleTypeDef hpcd_USB_FS;
 
+osThreadId defaultTaskHandle;
+/* USER CODE BEGIN PV */
 char readBuf[4];
 //char dispBuf[LINEMAX];
 char dispBuf[LINEMAX + 1]; // Holding buffer with space for terminating NUL
@@ -63,15 +65,15 @@ RingBuffer txBuf, rxBuf;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
-/* USER CODE BEGIN PFP */
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_RTC_Init(void);
 static void MX_USB_PCD_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USART2_UART_Init(void);
-//extern void MX_GPIO_Init(void);
-//extern void MX_USART2_UART_Init(void);
+void StartDefaultTask(void const * argument);
+
+/* USER CODE BEGIN PFP */
 void performCriticalTasks(void);
 void printWelcomeMessage(void);
 uint8_t processUserInput(void);
@@ -101,14 +103,18 @@ int main(void)
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
+
   /* USER CODE BEGIN Init */
 
   /* USER CODE END Init */
+
   /* Configure the system clock */
   SystemClock_Config();
+
   /* USER CODE BEGIN SysInit */
 
   /* USER CODE END SysInit */
+
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_RTC_Init();
@@ -116,32 +122,58 @@ int main(void)
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-
-  /* USER CODE END 2 */
-
   /* Enable USART2 interrupt */
-  HAL_NVIC_SetPriority(USART2_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(USART2_IRQn);
+  //HAL_NVIC_SetPriority(USART2_IRQn, 0, 0);
+  //HAL_NVIC_EnableIRQ(USART2_IRQn);
 
-
-
-printMessage:
+  printMessage:
 
   printWelcomeMessage();
+  /* USER CODE END 2 */
 
-  while (1)  {
-    readUserInput();
+  /* USER CODE BEGIN RTOS_MUTEX */
+  /* add mutexes, ... */
+  /* USER CODE END RTOS_MUTEX */
 
-    err = processUserInput();
-    if(err == 2)
-    {
-      goto printMessage;
-    }
-    performCriticalTasks();
-    HAL_UART_ErrorCallback(&huart2);
+  /* USER CODE BEGIN RTOS_SEMAPHORES */
+  /* add semaphores, ... */
+  /* USER CODE END RTOS_SEMAPHORES */
+
+  /* USER CODE BEGIN RTOS_TIMERS */
+  /* start timers, add new ones, ... */
+  /* USER CODE END RTOS_TIMERS */
+
+  /* USER CODE BEGIN RTOS_QUEUES */
+  /* add queues, ... */
+  /* USER CODE END RTOS_QUEUES */
+
+  /* Create the thread(s) */
+  /* definition and creation of defaultTask */
+  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
+  defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
+
+  /* USER CODE BEGIN RTOS_THREADS */
+  /* add threads, ... */
+  /* USER CODE END RTOS_THREADS */
+
+  /* Start scheduler */
+  osKernelStart();
+  
+  /* We should never get here as control is now taken by the scheduler */
+
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
+  while (1)
+  {
+
+    
   }
+  /* USER CODE END WHILE */
+
+  
 }
 
+/* USER CODE BEGIN 3 */
 uint8_t UART_Transmit(UART_HandleTypeDef *huart, uint8_t *pData, uint16_t len) {
   if(HAL_UART_Transmit_IT(huart, pData, len) != HAL_OK) {
     if(RingBuffer_Write(&txBuf, pData, len) != RING_BUFFER_OK)
@@ -160,8 +192,8 @@ void clearRxBuffer()
 	}
 }
 
- void readUserInput() {
-
+void readUserInput() 
+{
   if(UartReady == SET) {
     UartReady = RESET;
     HAL_UART_Receive_IT(&huart2, (uint8_t*)readBuf, sizeof(readBuf));
@@ -211,7 +243,6 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
     HAL_UART_Receive_IT(&huart2, (uint8_t*)readBuf, sizeof(readBuf));
   }
 }
-
 
 uint8_t processUserInput() {
   char faultMsg[] = "Invalid Line\r\n";
@@ -286,6 +317,7 @@ void printWelcomeMessage(void) {
     while (HAL_UART_GetState(&huart2) == HAL_UART_STATE_BUSY_TX || HAL_UART_GetState(&huart2) == HAL_UART_STATE_BUSY_TX_RX);
   }
 }
+/* USER CODE END 3 */
 
 /**
   * @brief System Clock Configuration
@@ -460,7 +492,6 @@ static void MX_USB_PCD_Init(void)
 
 }
 
-
 /**
   * @brief GPIO Initialization Function
   * @param None
@@ -508,6 +539,46 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE END 4 */
 
+/* USER CODE BEGIN Header_StartDefaultTask */
+/**
+  * @brief  Function implementing the defaultTask thread.
+  * @param  argument: Not used 
+  * @retval None
+  */
+/* USER CODE END Header_StartDefaultTask */
+void StartDefaultTask(void const * argument)
+{
+
+  /* USER CODE BEGIN 5 */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END 5 */ 
+}
+
+/**
+  * @brief  Period elapsed callback in non blocking mode
+  * @note   This function is called  when TIM1 interrupt took place, inside
+  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
+  * a global variable "uwTick" used as application time base.
+  * @param  htim : TIM handle
+  * @retval None
+  */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  /* USER CODE BEGIN Callback 0 */
+
+  /* USER CODE END Callback 0 */
+  if (htim->Instance == TIM1) {
+    HAL_IncTick();
+  }
+  /* USER CODE BEGIN Callback 1 */
+
+  /* USER CODE END Callback 1 */
+}
+
 /**
   * @brief  This function is executed in case of error occurrence.
   * @retval None
@@ -520,32 +591,21 @@ void Error_Handler(void)
   /* USER CODE END Error_Handler_Debug */
 }
 
-#ifdef USE_FULL_ASSERT
-
+#ifdef  USE_FULL_ASSERT
 /**
-   * @brief Reports the name of the source file and the source line number
-   * where the assert_param error has occurred.
-   * @param file: pointer to the source file name
-   * @param line: assert_param error line source number
-   * @retval None
-   */
-void assert_failed(uint8_t* file, uint32_t line)
-{
+  * @brief  Reports the name of the source file and the source line number
+  *         where the assert_param error has occurred.
+  * @param  file: pointer to the source file name
+  * @param  line: assert_param error line source number
+  * @retval None
+  */
+void assert_failed(uint8_t *file, uint32_t line)
+{ 
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
   /* USER CODE END 6 */
-
 }
-
-#endif
-
-/**
-  * @}
-  */
-
-/**
-  * @}
-*/
+#endif /* USE_FULL_ASSERT */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
