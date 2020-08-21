@@ -270,16 +270,6 @@ uint8_t processUserCommand(uint8_t p_status)
         if (count == 1) 
         {
           publishMessage(g_client, userCMD);
-          /*
-          if(strcmp(userCMD,"par1\r\n")==0)
-          {
-            HAL_UART_Transmit(&huart1, (uint8_t*)"Par1\n\r", strlen("Par1\n\r"), HAL_MAX_DELAY);
-          }
-          else if(strcmp(userCMD,"par2\r\n")==0)
-          {
-            HAL_UART_Transmit(&huart1, (uint8_t*)"Par2\n\r", strlen("Par2\n\r"), HAL_MAX_DELAY);
-          }
-          */
         }
         userCMD = strtok(NULL, " ");  //Go to next string in command buffer
         ++count;
@@ -289,8 +279,15 @@ uint8_t processUserCommand(uint8_t p_status)
     else if(strcmp(userCMD,"wait\r\n")==0)
     {
       clearRxBuffer();
-      HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rwait for a message to be sent\n\r", strlen("\n\rwait for a message to be sent\n\r"), HAL_MAX_DELAY);
+      HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rSub and wait for a message to be received\n\r", strlen("\n\rSub and wait for a message to be received\n\r"), HAL_MAX_DELAY);
       waitForMessage(g_client);
+      HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rDone and still connected and subbed\n\r", strlen("\n\rDone and still connected and subbed\n\r"), HAL_MAX_DELAY);
+    }
+    else if(strcmp(userCMD,"disconnect\r\n")==0)
+    {
+      clearRxBuffer();
+      HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rDisconnecting from Client\n\r", strlen("\n\rDisconnecting from Client\n\r"), HAL_MAX_DELAY);
+      disconnectClient(g_client);
     }
     else
     {

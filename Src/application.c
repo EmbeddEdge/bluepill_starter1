@@ -74,7 +74,7 @@ void debug_puts(const char* str, int len)
 }
 
 /* Callback for receiving messages.
- * This will be called from within Client.run()
+ * This will be called from within Client_run()
  */
 static void receiveCallback(void *cookie, Topic topic, QOS qos, uint8_t* msg, uint16_t msgLen)
 {
@@ -209,6 +209,16 @@ Client* setupTSStack(UART_HandleTypeDef *modem_uart, UART_HandleTypeDef *debug_u
     Client* client = Client_create(transport, NULL);
     CHECK("client", client != NULL);
 
+    while(client!=NULL)
+    {
+        ClientResult cr;
+
+        cr = Client_connect(client, true, NULL, NULL);
+        CHECK("connect", cr == CLIENT_SUCCESS);
+        break;
+        //HAL_Delay(100);
+    }  
+
     return client;
 
 error:
@@ -265,6 +275,55 @@ error:
 }
 
 /*
+ * Subscribe to a Topic.
+ * @param p_client A Client instance that was configured in a previous function
+ * @param debug_uart A handle to the serial port to use for debug output.
+ *                   If NULL, then no debug output
+ */
+void subscribeTopic(Client* p_client, char* p_topicName)
+{
+
+    if (p_client != NULL)
+    {
+        Topic topic;
+        ClientResult cr;
+
+        cr = Client_connect(p_client, true, NULL, NULL);
+        CHECK("connect", cr == CLIENT_SUCCESS);
+
+        /* Registration is redundant here, since subscribeName can
+         * also return the Id.
+         * Typical applications might not subscribe to topics they
+         * publish to, so this is included here for illustration.
+         */
+        cr = Client_register(p_client, EXAMPLE_TOPIC, &topic);
+        CHECK("register", cr == CLIENT_SUCCESS);
+        exampleTopicId = topic.topicId;
+
+        Client_set_subscribe_callback(p_client, receiveCallback, NULL);
+
+        /* subscribe to the same message to receive it back by the server */
+        cr = Client_subscribeName(p_client, EXAMPLE_TOPIC, MQTT_QOS1, NULL);
+        CHECK("subscribe", cr == CLIENT_SUCCESS);
+
+        //char *msg = "Hello from STM32";
+        cr = Client_publish(p_client, topic, MQTT_QOS1, false, (uint8_t*) p_msg, strlen(p_msg), NULL);
+        CHECK("publish", cr == CLIENT_SUCCESS);
+
+        while (!done)
+        {
+            /* poll for incoming messages */
+            Client_run(p_client, 1000);
+        }
+        cr = Client_disconnect(p_client, 0);
+        CHECK("disconnect", cr == CLIENT_SUCCESS);
+    }
+
+error:
+    return;
+}
+
+/*
  * Wait to recieve a message.
  * @param p_client A Client instance that was configured in a previous function
  */
@@ -275,9 +334,6 @@ void waitForMessage(Client* p_client)
     {
         Topic topic;
         ClientResult cr;
-
-        cr = Client_connect(p_client, true, NULL, NULL);
-        CHECK("connect", cr == CLIENT_SUCCESS);
 
         Client_set_subscribe_callback(p_client, receiveCallback, NULL);
 
@@ -291,6 +347,24 @@ void waitForMessage(Client* p_client)
             /* poll for incoming messages */
             Client_run(p_client, 10000);
         }
+        return;
+    }
+
+error:
+    return;
+}
+
+/*
+ * Disconnect the client connection.
+ * @param p_client A Client instance that was configured in a previous function
+ */
+void disconnectClient(Client* p_client)
+{
+
+    if (p_client != NULL)
+    {
+        ClientResult cr;
+
         cr = Client_disconnect(p_client, 0);
         CHECK("disconnect", cr == CLIENT_SUCCESS);
     }

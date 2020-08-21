@@ -39,6 +39,7 @@ extern void runApplication(UART_HandleTypeDef *modem_uart, UART_HandleTypeDef *d
 extern Client* setupTSStack(UART_HandleTypeDef *modem_uart, UART_HandleTypeDef *debug_uart);
 extern void publishMessage(Client* p_client, char* p_msg);
 extern void waitForMessage(Client* p_client);
+extern void disconnectClient(Client* p_client);
 
 #if defined(__cplusplus)
 }
