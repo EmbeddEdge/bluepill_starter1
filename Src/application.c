@@ -48,6 +48,7 @@ static uint8_t thingstream_buffer[THINGSTREAM_BUFFER_LENGTH];
 static uint8_t line_buffer[LINE_BUFFER_LENGTH];
 
 #define EXAMPLE_TOPIC "test/stm32/first"
+#define DEF_TOPIC "events/embeddedge/manual"
 static uint16_t exampleTopicId = 0; /* will get updated after registration */
 
 #define CHECK(msg, cond) do { \
@@ -226,21 +227,18 @@ error:
 }
 
 /*
- * Use the Thingstream stack to publish a message.
+ * Subscribe to a Topic.
  * @param p_client A Client instance that was configured in a previous function
  * @param debug_uart A handle to the serial port to use for debug output.
  *                   If NULL, then no debug output
  */
-void publishMessage(Client* p_client, char* p_msg)
+void subscribeTopic(Client* p_client, char* p_topicName)
 {
 
     if (p_client != NULL)
     {
         Topic topic;
         ClientResult cr;
-
-        cr = Client_connect(p_client, true, NULL, NULL);
-        CHECK("connect", cr == CLIENT_SUCCESS);
 
         /* Registration is redundant here, since subscribeName can
          * also return the Id.
@@ -257,17 +255,6 @@ void publishMessage(Client* p_client, char* p_msg)
         cr = Client_subscribeName(p_client, EXAMPLE_TOPIC, MQTT_QOS1, NULL);
         CHECK("subscribe", cr == CLIENT_SUCCESS);
 
-        //char *msg = "Hello from STM32";
-        cr = Client_publish(p_client, topic, MQTT_QOS1, false, (uint8_t*) p_msg, strlen(p_msg), NULL);
-        CHECK("publish", cr == CLIENT_SUCCESS);
-
-        while (!done)
-        {
-            /* poll for incoming messages */
-            Client_run(p_client, 1000);
-        }
-        cr = Client_disconnect(p_client, 0);
-        CHECK("disconnect", cr == CLIENT_SUCCESS);
     }
 
 error:
@@ -275,12 +262,12 @@ error:
 }
 
 /*
- * Subscribe to a Topic.
+ * Use the Thingstream stack to publish a message.
  * @param p_client A Client instance that was configured in a previous function
  * @param debug_uart A handle to the serial port to use for debug output.
  *                   If NULL, then no debug output
  */
-void subscribeTopic(Client* p_client, char* p_topicName)
+void publishMessage(Client* p_client, char* p_msg)
 {
 
     if (p_client != NULL)

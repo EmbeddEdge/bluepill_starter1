@@ -235,18 +235,6 @@ uint8_t processUserCommand(uint8_t p_status)
       HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rTurn LED off\n\r", strlen("\n\rTurn LED off\n\r"), HAL_MAX_DELAY);
       HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_RESET);
     }
-    else if(strcmp(userCMD,"connect\r\n")==0)
-    {
-      clearRxBuffer();
-      HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rClient connection check\n\r", strlen("\n\rClient connection check\n\r"), HAL_MAX_DELAY);
-      g_client = setupTSStack(&huart2, &huart1);
-    }
-    else if(strcmp(userCMD,"publish\r\n")==0)
-    {
-      clearRxBuffer();
-      HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rPublish Message\n\r", strlen("\n\rPublish Message\n\r"), HAL_MAX_DELAY);
-      publishMessage(g_client, "Hello From Device1");
-    }
     else if(strcmp(userCMD,"runApp\r\n")==0)
     {
       clearRxBuffer();
@@ -254,11 +242,29 @@ uint8_t processUserCommand(uint8_t p_status)
       HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_SET);
       runApplication(&huart2, &huart1);
     }
+    else if(strcmp(userCMD,"publish\r\n")==0)
+    {
+      clearRxBuffer();
+      HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rPublish Message\n\r", strlen("\n\rPublish Message\n\r"), HAL_MAX_DELAY);
+      publishMessage(g_client, "Hello From Device1");
+    }
     else if(strcmp(userCMD,"ShowInfo\r\n")==0)
     {
       clearRxBuffer();
       HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rDisplay some info\n\r", strlen("\n\rDisplay some info\n\r"), HAL_MAX_DELAY);
       HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_SET);
+    }
+    else if(strcmp(userCMD,"connect\r\n")==0)
+    {
+      clearRxBuffer();
+      HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rClient connection check\n\r", strlen("\n\rClient connection check\n\r"), HAL_MAX_DELAY);
+      g_client = setupTSStack(&huart2, &huart1);
+    }
+    else if(strcmp(userCMD,"Sub\r\n")==0)
+    {
+      clearRxBuffer();
+      HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rSubscribe to pre\n\r", strlen("\n\rSubscribe to pre\n\r"), HAL_MAX_DELAY);
+      subscribeTopic(g_client, "test/stm32/first");
     }
     else if(strcmp(userCMD,"Send")==0)
     {
