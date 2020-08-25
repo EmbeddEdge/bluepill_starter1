@@ -17,6 +17,9 @@
 #ifndef INC_APPLICATION_H_
 #define INC_APPLICATION_H_
 
+#define EXAMPLE_TOPIC "test/stm32/first"
+#define DEF_TOPIC "events/embeddedge/manual"
+
 #include "main.h"
 /* If the generated main.h does not include the target
  * specific HAL header then include it here, e.g.
@@ -35,12 +38,12 @@ extern "C" {
  * @param debug_uart A handle to the serial port to use for debug output.
  *                   If NULL, then no debug output
  */
-extern void runApplication(UART_HandleTypeDef *modem_uart, UART_HandleTypeDef *debug_uart);
-extern Client* setupTSStack(UART_HandleTypeDef *modem_uart, UART_HandleTypeDef *debug_uart);
-extern void subscribeTopic(Client* p_client, char* p_topicName);
-extern void publishMessage(Client* p_client, char* p_msg);
-extern void waitForMessage(Client* p_client);
-extern void disconnectClient(Client* p_client);
+extern void runApplication(UART_HandleTypeDef*, UART_HandleTypeDef*);
+extern Client* setupTSStack(UART_HandleTypeDef*, UART_HandleTypeDef*);
+extern Topic subscribeTopic(Client*, char*);
+extern void publishMessage(Client*, Topic, char*);
+extern void waitForMessage(Client*);
+extern void disconnectClient(Client*);
 
 #if defined(__cplusplus)
 }

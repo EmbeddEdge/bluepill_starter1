@@ -54,11 +54,12 @@ PCD_HandleTypeDef hpcd_USB_FS;
 
 /* USER CODE BEGIN PV */
 Client* g_client;
+Topic g_topic;
 uint8_t status;
 uint8_t g_buttCode = 0;
 char readBuf[1];
 char rxDataBuffer[1];
-char rxCapBuffer[20];
+char rxCapBuffer[50];
 char txDataBuffer[10];
 uint8_t intrxDataBuffer = 0x0;
 uint8_t inttxDataBuffer = 0x0;
@@ -80,6 +81,7 @@ int8_t readUserInput(void);
 uint8_t readUserCommand(void);
 uint8_t processUserCommand(uint8_t);
 uint8_t processUserInput(int8_t);
+char* removeCRNL(char* p_buffer);
 void clearRxBuffer(void);
 /* USER CODE END PFP */
 
@@ -246,7 +248,8 @@ uint8_t processUserCommand(uint8_t p_status)
     {
       clearRxBuffer();
       HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rPublish Message\n\r", strlen("\n\rPublish Message\n\r"), HAL_MAX_DELAY);
-      publishMessage(g_client, "Hello From Device1");
+      publishMessage(g_client, g_topic, "Hello From Device1");
+      HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rMessage Sent!\n\r", strlen("\n\rMessage Sent!\n\r"), HAL_MAX_DELAY);
     }
     else if(strcmp(userCMD,"ShowInfo\r\n")==0)
     {
@@ -260,32 +263,49 @@ uint8_t processUserCommand(uint8_t p_status)
       HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rClient connection check\n\r", strlen("\n\rClient connection check\n\r"), HAL_MAX_DELAY);
       g_client = setupTSStack(&huart2, &huart1);
     }
-    else if(strcmp(userCMD,"Sub\r\n")==0)
+    else if(strcmp(userCMD,"SubD\r\n")==0)
     {
       clearRxBuffer();
-      HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rSubscribe to pre\n\r", strlen("\n\rSubscribe to pre\n\r"), HAL_MAX_DELAY);
-      subscribeTopic(g_client, "test/stm32/first");
+      HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rSubscribe to a Default Topic\n\r", strlen("\n\rSubscribe to a Default Topic\n\r"), HAL_MAX_DELAY);
+      g_topic = subscribeTopic(g_client, EXAMPLE_TOPIC);
     }
-    else if(strcmp(userCMD,"Send")==0)
+    else if(strcmp(userCMD,"Sub")==0)
     {
-      
-      //HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rThe Command param is: \n\r", strlen("\n\rThe Command param is: \n\r"), HAL_MAX_DELAY);
+      HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rSubscribe to Specified Topic\n\r", strlen("\n\rSubscribe to Specified Topic\n\r"), HAL_MAX_DELAY);
       uint8_t count = 0;
       while (userCMD != NULL)
       {
         if (count == 1) 
         {
-          publishMessage(g_client, userCMD);
+          char* topicName = userCMD;
+          topicName = removeCRNL(topicName);
+          g_topic = subscribeTopic(g_client, topicName);
         }
         userCMD = strtok(NULL, " ");  //Go to next string in command buffer
         ++count;
       }
       clearRxBuffer();
     }
+    else if(strcmp(userCMD,"Send")==0)
+    {
+      //HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rThe Command param is: \n\r", strlen("\n\rThe Command param is: \n\r"), HAL_MAX_DELAY);
+      uint8_t count = 0;
+      while (userCMD != NULL)
+      {
+        if (count == 1) 
+        {
+          publishMessage(g_client, g_topic, userCMD);
+        }
+        userCMD = strtok(NULL, " ");  //Go to next string in command buffer
+        ++count;
+      }
+      clearRxBuffer();
+      HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rMessage Sent!\n\r", strlen("\n\rMessage Sent!\n\r"), HAL_MAX_DELAY);
+    }
     else if(strcmp(userCMD,"wait\r\n")==0)
     {
       clearRxBuffer();
-      HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rSub and wait for a message to be received\n\r", strlen("\n\rSub and wait for a message to be received\n\r"), HAL_MAX_DELAY);
+      HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rWait for a message to be received from subbed topic\n\r", strlen("\n\rWait for a message to be received from subbed topic\n\r"), HAL_MAX_DELAY);
       waitForMessage(g_client);
       HAL_UART_Transmit(&huart1, (uint8_t*)"\n\rDone and still connected and subbed\n\r", strlen("\n\rDone and still connected and subbed\n\r"), HAL_MAX_DELAY);
     }
@@ -335,6 +355,22 @@ uint8_t processUserInput(int8_t opt) {
 
   HAL_UART_Transmit(&huart2, (uint8_t*)PROMPT, strlen(PROMPT), HAL_MAX_DELAY);
   return 1;
+}
+
+char* removeCRNL(char* p_buffer)
+{
+  int n;
+  char cr = '\r';
+  char nl = '\n';
+  int length = sprintf(p_buffer, "%s", p_buffer);
+  for(n=0;n<length;n++)
+  {
+    if(p_buffer[n]==cr || p_buffer[n]==nl)
+    {
+      p_buffer[n] = '\0';
+    }
+  }
+  return p_buffer;
 }
 
 void clearRxBuffer(void)

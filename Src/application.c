@@ -47,8 +47,6 @@ static uint8_t thingstream_buffer[THINGSTREAM_BUFFER_LENGTH];
 #define LINE_BUFFER_LENGTH 300
 static uint8_t line_buffer[LINE_BUFFER_LENGTH];
 
-#define EXAMPLE_TOPIC "test/stm32/first"
-#define DEF_TOPIC "events/embeddedge/manual"
 static uint16_t exampleTopicId = 0; /* will get updated after registration */
 
 #define CHECK(msg, cond) do { \
@@ -231,13 +229,14 @@ error:
  * @param p_client A Client instance that was configured in a previous function
  * @param debug_uart A handle to the serial port to use for debug output.
  *                   If NULL, then no debug output
+ * Returns the Topic that has been registered and subscribed to
  */
-void subscribeTopic(Client* p_client, char* p_topicName)
+Topic subscribeTopic(Client* p_client, char* p_topicName)
 {
+    Topic topic;
 
     if (p_client != NULL)
     {
-        Topic topic;
         ClientResult cr;
 
         /* Registration is redundant here, since subscribeName can
@@ -245,17 +244,18 @@ void subscribeTopic(Client* p_client, char* p_topicName)
          * Typical applications might not subscribe to topics they
          * publish to, so this is included here for illustration.
          */
-        cr = Client_register(p_client, EXAMPLE_TOPIC, &topic);
+        cr = Client_register(p_client, p_topicName, &topic);
         CHECK("register", cr == CLIENT_SUCCESS);
         exampleTopicId = topic.topicId;
 
         Client_set_subscribe_callback(p_client, receiveCallback, NULL);
 
         /* subscribe to the same message to receive it back by the server */
-        cr = Client_subscribeName(p_client, EXAMPLE_TOPIC, MQTT_QOS1, NULL);
+        cr = Client_subscribeName(p_client, p_topicName, MQTT_QOS1, NULL);
         CHECK("subscribe", cr == CLIENT_SUCCESS);
 
     }
+    return topic;
 
 error:
     return;
@@ -267,34 +267,34 @@ error:
  * @param debug_uart A handle to the serial port to use for debug output.
  *                   If NULL, then no debug output
  */
-void publishMessage(Client* p_client, char* p_msg)
+void publishMessage(Client* p_client, Topic p_Topic, char* p_msg)
 {
 
     if (p_client != NULL)
     {
-        Topic topic;
+        //Topic topic;
         ClientResult cr;
 
-        cr = Client_connect(p_client, true, NULL, NULL);
-        CHECK("connect", cr == CLIENT_SUCCESS);
+        //cr = Client_connect(p_client, true, NULL, NULL);
+        //CHECK("connect", cr == CLIENT_SUCCESS);
 
         /* Registration is redundant here, since subscribeName can
          * also return the Id.
          * Typical applications might not subscribe to topics they
          * publish to, so this is included here for illustration.
          */
-        cr = Client_register(p_client, EXAMPLE_TOPIC, &topic);
-        CHECK("register", cr == CLIENT_SUCCESS);
-        exampleTopicId = topic.topicId;
+        //cr = Client_register(p_client, EXAMPLE_TOPIC, &topic);
+        //CHECK("register", cr == CLIENT_SUCCESS);
+        //exampleTopicId = topic.topicId;
 
-        Client_set_subscribe_callback(p_client, receiveCallback, NULL);
+        //Client_set_subscribe_callback(p_client, receiveCallback, NULL);
 
         /* subscribe to the same message to receive it back by the server */
-        cr = Client_subscribeName(p_client, EXAMPLE_TOPIC, MQTT_QOS1, NULL);
-        CHECK("subscribe", cr == CLIENT_SUCCESS);
+        //cr = Client_subscribeName(p_client, EXAMPLE_TOPIC, MQTT_QOS1, NULL);
+        //CHECK("subscribe", cr == CLIENT_SUCCESS);
 
         //char *msg = "Hello from STM32";
-        cr = Client_publish(p_client, topic, MQTT_QOS1, false, (uint8_t*) p_msg, strlen(p_msg), NULL);
+        cr = Client_publish(p_client, p_Topic, MQTT_QOS1, false, (uint8_t*) p_msg, strlen(p_msg), NULL);
         CHECK("publish", cr == CLIENT_SUCCESS);
 
         while (!done)
@@ -302,8 +302,8 @@ void publishMessage(Client* p_client, char* p_msg)
             /* poll for incoming messages */
             Client_run(p_client, 1000);
         }
-        cr = Client_disconnect(p_client, 0);
-        CHECK("disconnect", cr == CLIENT_SUCCESS);
+        //cr = Client_disconnect(p_client, 0);
+        //CHECK("disconnect", cr == CLIENT_SUCCESS);
     }
 
 error:
@@ -311,7 +311,7 @@ error:
 }
 
 /*
- * Wait to recieve a message.
+ * Wait to recieve a message from the subscribed Topic.
  * @param p_client A Client instance that was configured in a previous function
  */
 void waitForMessage(Client* p_client)
@@ -319,16 +319,6 @@ void waitForMessage(Client* p_client)
 
     if (p_client != NULL)
     {
-        Topic topic;
-        ClientResult cr;
-
-        Client_set_subscribe_callback(p_client, receiveCallback, NULL);
-
-        /* subscribe to the same message to receive it back by the server */
-        cr = Client_subscribeName(p_client, EXAMPLE_TOPIC, MQTT_QOS1, &topic);
-        CHECK("subscribe", cr == CLIENT_SUCCESS);
-        exampleTopicId = topic.topicId;
-
         while (!done)
         {
             /* poll for incoming messages */
