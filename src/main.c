@@ -80,6 +80,7 @@ uint8_t processUserInput(void);
 void clearRxBuffer(void);
 void readUserInput(void);
 void readUserInputByByte(void);
+void blinkThread(void const *argument);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -94,7 +95,8 @@ void readUserInputByByte(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-  int err;
+  //int err;
+  osThreadId blinkTID;
   //uint8_t opt = 0;
 
   /* USER CODE END 1 */
@@ -126,9 +128,9 @@ int main(void)
   //HAL_NVIC_SetPriority(USART2_IRQn, 0, 0);
   //HAL_NVIC_EnableIRQ(USART2_IRQn);
 
-  printMessage:
+  //printMessage:
 
-  printWelcomeMessage();
+  //printWelcomeMessage();
   /* USER CODE END 2 */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -149,8 +151,10 @@ int main(void)
 
   /* Create the thread(s) */
   /* definition and creation of defaultTask */
-  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
-  defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
+  //osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
+  osThreadDef(blink, blinkThread, osPriorityNormal, 0, 100);
+  //defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
+  blinkTID = osThreadCreate(osThread(blink), NULL);
   // A comment
 
   /* USER CODE BEGIN RTOS_THREADS */
@@ -175,6 +179,13 @@ int main(void)
 }
 
 /* USER CODE BEGIN 3 */
+void blinkThread(void const *argument) {
+  while(1) {
+    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_9);
+    osDelay(500);
+  }
+}
+
 uint8_t UART_Transmit(UART_HandleTypeDef *huart, uint8_t *pData, uint16_t len) {
   if(HAL_UART_Transmit_IT(huart, pData, len) != HAL_OK) {
     if(RingBuffer_Write(&txBuf, pData, len) != RING_BUFFER_OK)
