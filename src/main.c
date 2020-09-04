@@ -50,11 +50,14 @@ RTC_HandleTypeDef hrtc;
 
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
+//extern UART_HandleTypeDef huart1;
+//extern UART_HandleTypeDef huart2;
 
 PCD_HandleTypeDef hpcd_USB_FS;
 
 osThreadId defaultTaskHandle;
 /* USER CODE BEGIN PV */
+volatile const int __attribute__((used)) uxTopUsedPriority = configMAX_PRIORITIES;
 char readBuf[4];
 //char dispBuf[LINEMAX];
 char dispBuf[LINEMAX + 1]; // Holding buffer with space for terminating NUL
@@ -81,6 +84,7 @@ void clearRxBuffer(void);
 void readUserInput(void);
 void readUserInputByByte(void);
 void blinkThread(void const *argument);
+void UARTThread(void const *argument);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -96,7 +100,6 @@ int main(void)
 {
   /* USER CODE BEGIN 1 */
   //int err;
-  osThreadId blinkTID;
   //uint8_t opt = 0;
 
   /* USER CODE END 1 */
@@ -128,9 +131,6 @@ int main(void)
   //HAL_NVIC_SetPriority(USART2_IRQn, 0, 0);
   //HAL_NVIC_EnableIRQ(USART2_IRQn);
 
-  //printMessage:
-
-  //printWelcomeMessage();
   /* USER CODE END 2 */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -150,11 +150,12 @@ int main(void)
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* definition and creation of defaultTask */
-  //osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
+  /* definition and creation of blinkTask */
   osThreadDef(blink, blinkThread, osPriorityNormal, 0, 100);
-  //defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
-  blinkTID = osThreadCreate(osThread(blink), NULL);
+  osThreadCreate(osThread(blink), NULL);
+
+  osThreadDef(uart, UARTThread, osPriorityAboveNormal, 0, 100);
+  osThreadCreate(osThread(uart), NULL);
   // A comment
 
   /* USER CODE BEGIN RTOS_THREADS */
@@ -179,10 +180,20 @@ int main(void)
 }
 
 /* USER CODE BEGIN 3 */
-void blinkThread(void const *argument) {
-  while(1) {
+void blinkThread(void const *argument) 
+{
+  while(1) 
+  {
     HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_9);
     osDelay(500);
+  }
+}
+
+void UARTThread(void const *argument) 
+{
+  while(1) 
+  {
+    HAL_UART_Transmit(&huart1, "UARTThread\r\n", strlen("UARTThread\r\n"), HAL_MAX_DELAY);
   }
 }
 
