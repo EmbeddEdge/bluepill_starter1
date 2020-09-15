@@ -87,7 +87,7 @@ char* readUserInput(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-  char* opt;
+  //char* opt;
   //uint8_t opt = 0;
 
   /* USER CODE END 1 */
@@ -110,9 +110,9 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_RTC_Init();
-  MX_USB_PCD_Init();
-  MX_USART1_UART_Init();
+  //MX_RTC_Init();
+  //MX_USB_PCD_Init();
+  //MX_USART1_UART_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
   /* Enable USART2 interrupt */
@@ -139,22 +139,6 @@ int main(void)
     {
       HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_RESET);
     }
-    //char ms[30];
-    //opt = readUserInput();
-    //sprintf(ms, "%d", opt);
-    //HAL_UART_Transmit(&huart2, (uint8_t*)ms, strlen(ms), HAL_MAX_DELAY);
-    //HAL_UART_Transmit(&huart2, (uint8_t*)opt , strlen(readBuf), HAL_MAX_DELAY);
-    //HAL_UART_Transmit(&huart2, (uint8_t*)"\r\n", 2, HAL_MAX_DELAY);
-    /*
-    if(opt > 0) {
-      processUserInput(opt);
-      if(opt == 3)
-        goto printMessage;
-    }
-    */
-    //processUserInput(opt);
-    //performCriticalTasks();
-    //HAL_UART_ErrorCallback(&huart2);
   }
   /* USER CODE END WHILE */
   
