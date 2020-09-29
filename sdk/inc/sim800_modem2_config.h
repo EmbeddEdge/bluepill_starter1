@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2020 Thingstream AG
+ * Copyright 2020 Thingstream AG
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,34 +16,30 @@
 
 /**
  * @file
- * @brief An interface to communicate over a serial port.
- */
-#ifndef INC_SERIAL_API_H_
-#define INC_SERIAL_API_H_
-
-#include "main.h"
-/* If the generated main.h does not include the target
- * specific HAL header then include it here, e.g.
-#include "stm32f4xx_hal.h"
+ * @addtogroup udp_modems
+ * @{
  */
 
-#include <stdint.h>
+#ifndef INC_SIM800_MODEM2_CONFIG_H
+#define INC_SIM800_MODEM2_CONFIG_H
+
+#include "modem2_transport.h"
 
 #if defined(__cplusplus)
 extern "C" {
+#elif 0
+}
 #endif
 
-#include <transport_api.h>
-
 /**
- * Create a Serial instance that transfers bytes over a serial port.
- * @param port A handle to the serial port to use.
- * @return an instance of Serial
+ * Pass #Thingstream_Simcom800Init to Thingstream_createModem2Transport()
+ * to configure the modem driver to match the Simcom SIM800 hardware.
  */
-extern ThingstreamTransport* serial_transport_create(UART_HandleTypeDef* port);
+extern ThingstreamModem2UdpInit Thingstream_Simcom800Init;
 
 #if defined(__cplusplus)
 }
 #endif
 
-#endif /* INC_SERIAL_API_H_ */
+#endif /* INC_SIM800_MODEM2_CONFIG_H */
+/** @} */

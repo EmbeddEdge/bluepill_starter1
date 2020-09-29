@@ -30,12 +30,12 @@ extern "C" {
 #endif
 
 /**
- * Thingstream clients are implicitly subscribed to the PredefinedSelfTopic
+ * Thingstream clients are implicitly subscribed to the Thingstream_PredefinedSelfTopic
  * and will receive messages that are sent to topic "device/{identity}" where
  * {identity} is the value shown on the https://portal.thingstream.io
- * ThingInfo page.
+ * Thing Details page.
  */
-const Topic PredefinedSelfTopic = MAKE_PREDEFINED_TOPIC(1);
+const ThingstreamTopic Thingstream_PredefinedSelfTopic = MAKE_PREDEFINED_TOPIC(1);
 
 
 #if defined(__cplusplus)

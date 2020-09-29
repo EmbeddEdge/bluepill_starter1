@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2018 Thingstream AG
+ * Copyright 2017-2020 Thingstream AG
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ extern "C" {
 #endif
 
 /**
- * Create a thingstream transport instance.
+ * Create a thingstream protocol transport instance.
  * This wraps MQTT-SN data in a structure identifying the payload to the USSD
  * infrastructure.
  * The caller can provide a buffer to use for this codec, allowing
@@ -37,22 +37,35 @@ extern "C" {
  * and reassembly. If NULL is passed in, or the buffer length is zero, this
  * codec will use the buffer of the inner transport, thus limiting payload
  * length to the MTU of the transport.
- * @param inner the underlying transport instance
- * @param buffer a buffer to use for reassembling inner transport packets
+ * @param inner the underlying #ThingstreamTransport instance
+ * @param buffer a buffer to use for reassembling inner #ThingstreamTransport packets
  * @param len the length of the provided buffer
- * @return the new Transport instance
+ * @return the new #ThingstreamTransport instance
  */
-extern Transport* thingstream_transport_create(Transport* inner, uint8_t* buffer, uint16_t len);
-
+extern ThingstreamTransport* Thingstream_createProtocolTransport(ThingstreamTransport* inner, uint8_t* buffer, uint16_t len);
 
 /**
  * This api allows the default time between USSD sessions to be defined.
- * The call must happen before the call to Client_connect().
- * @param transport the thingstream transport instance
+ * The call must happen before the call to Thingstream_Client_connect().
+ * @param transport the #ThingstreamTransport instance
  * @param delay the delay, in milliseconds, between USSD sessions
- * @return an integer status code (success / fail)
+ * @return a #ThingstreamTransportResult status code (success / fail)
  */
-extern TransportResult thingstream_transport_set_ussd_session_delay(Transport* transport, uint32_t delay);
+extern ThingstreamTransportResult Thingstream_Protocol_setUssdSessionDelay(ThingstreamTransport* transport, uint32_t delay);
+
+#ifndef THINGSTREAM_NO_SHORT_NAMES
+/**
+ * @addtogroup legacy
+ * @{
+ */
+
+/** @deprecated             renamed to Thingstream_createProtocolTransport() */
+#define thingstream_transport_create   Thingstream_createProtocolTransport
+
+/** @deprecated                           renamed to Thingstream_Protocol_setUssdSessionDelay() */
+#define thingstream_transport_set_ussd_session_delay Thingstream_Protocol_setUssdSessionDelay
+/** @} */
+#endif /* !THINGSTREAM_NO_SHORT_NAMES */
 
 #if defined(__cplusplus)
 }

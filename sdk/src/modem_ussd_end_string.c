@@ -16,34 +16,28 @@
 
 /**
  * @file
- * @brief An interface to communicate over a serial port.
- */
-#ifndef INC_SERIAL_API_H_
-#define INC_SERIAL_API_H_
-
-#include "main.h"
-/* If the generated main.h does not include the target
- * specific HAL header then include it here, e.g.
-#include "stm32f4xx_hal.h"
+ * @brief Modem ussd end session string
+ *
+ * This file defines a modem initialisation string used by the
+ * Thingstream SDK and is provided for use (or modification) by customers.
  */
 
-#include <stdint.h>
+#include <modem_transport.h>
 
 #if defined(__cplusplus)
 extern "C" {
+#elif 0
+}
 #endif
 
-#include <transport_api.h>
-
 /**
- * Create a Serial instance that transfers bytes over a serial port.
- * @param port A handle to the serial port to use.
- * @return an instance of Serial
+ * This string is used to terminate the current USSD session
  */
-extern ThingstreamTransport* serial_transport_create(UART_HandleTypeDef* port);
+const char Thingstream_Modem_ussdEndSessionString[] =
+    "AT+CUSD=2\n"    /* Terminate the current USSD session */
+     ;
+
 
 #if defined(__cplusplus)
 }
 #endif
-
-#endif /* INC_SERIAL_API_H_ */

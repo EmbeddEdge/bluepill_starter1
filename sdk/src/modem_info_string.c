@@ -16,7 +16,7 @@
 
 /**
  * @file
- * @brief Modem initialisation string
+ * @brief Modem information string
  *
  * This file defines a modem initialisation string used by the
  * Thingstream SDK and is provided for use (or modification) by customers.
@@ -31,26 +31,19 @@ extern "C" {
 #endif
 
 /**
- * This string is used to initialise the modem.
- * Each entry in the string is terminated by "\n".
+ * This string is used to obtain information from the modem once it has been
+ * initialised. Each entry in the string is terminated by "\n".
  * If an entry starts with a "?" then the "?" is not passed to the modem, but
  * any ERROR (or +CME ERROR:) produced will be ignored.
- * An entry of the form ~n inserts a delay of n ms into the sequence.
  */
-const char Thingstream_Modem_initString[] =
-    "ATZ\n"            /* Reset Default Configuration */
-    "~100\n"           /* Wait 100 ms before proceeding */
-    "ATE0\n"           /* Set command echo mode (off) */
-    "AT+CMEE=2\n"      /* Report Mobile Equipment Error */
-    "?AT+CREG=2\n"     /* Network Registration (+location) */
-    "?AT+CUSD=1\n"     /* USSD Enable result codes (not needed for UDP) */
-    "?AT+CUSD=2\n"     /* USSD Cancel session (some modems only) */
-    "?AT&W\n"          /* Store Active Profile (in case spontaneous restart) */
-    "AT+CREG?\n"       /* Network Registration (current state)
-                        *    This must follow AT+CREG=2 above for
-                        *    the modem transport to finish the
-                        *    initialisation.
-                        */
+const char Thingstream_Modem_informationString[] =
+    "AT+CREG?\n"       /* Network Registration (current state) */
+    "?AT+CSQ\n"        /* Signal Quality (show current) */
+    "?AT+COPS?\n"      /* Operator selection (show current) */
+    "?AT+CIMI\n"       /* Request the IMSI */
+    "?AT+GMI\n"        /* Request manufacturer identification */
+    "?AT+GMM\n"        /* Request TA model identification */
+    "?AT+GMR\n"        /* Request TA software release revision */
      ;
 
 #if defined(__cplusplus)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Thingstream AG
+ * Copyright 2018-2019 Thingstream AG
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,12 +32,22 @@ extern "C" {
 #include <stdint.h>
 #include "client_api.h"
 
+/** See predefined_topics.c */
+extern const ThingstreamTopic Thingstream_PredefinedSelfTopic;
+
+#ifndef THINGSTREAM_NO_SHORT_NAMES
+/**
+ * @addtogroup legacy
+ * @{
+ */
+/** @deprecated renamed to #Thingstream_PredefinedSelfTopic */
+#define PredefinedSelfTopic Thingstream_PredefinedSelfTopic
+/*! @} */
+#endif /* !THINGSTREAM_NO_SHORT_NAMES */
+
 #if defined(__cplusplus)
 }
 #endif
-
-/** See predefined_topics.c */
-extern const Topic PredefinedSelfTopic;
 
 
 #endif /* INC_PREDEFINED_TOPICS_H_ */

@@ -39,11 +39,11 @@ extern "C" {
  *                   If NULL, then no debug output
  */
 extern void runApplication(UART_HandleTypeDef*, UART_HandleTypeDef*);
-extern Client* setupTSStack(UART_HandleTypeDef*, UART_HandleTypeDef*);
-extern Topic subscribeTopic(Client*, char*);
-extern void publishMessage(Client*, Topic, char*);
-extern void waitForMessage(Client*);
-extern void disconnectClient(Client*);
+extern ThingstreamClient* setupTSStack(UART_HandleTypeDef*, UART_HandleTypeDef*);
+extern ThingstreamTopic subscribeTopic(ThingstreamClient*, char*);
+extern void publishMessage(ThingstreamClient*, ThingstreamTopic, char*);
+extern void waitForMessage(ThingstreamClient*);
+extern void disconnectClient(ThingstreamClient*);
 
 #if defined(__cplusplus)
 }

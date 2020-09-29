@@ -14,13 +14,10 @@
  * limitations under the License.
  */
 
-/**
- * @file
- * @brief Base64 codec implemented as a ThingstreamTransport instance
- */
+#ifndef INC_LOG_PROTOCOL_TRANSPORT_H_
+#define INC_LOG_PROTOCOL_TRANSPORT_H_
 
-#ifndef INC_BASE64_CODEC_TRANSPORT_H_
-#define INC_BASE64_CODEC_TRANSPORT_H_
+#include <stdint.h>
 
 #include "transport_api.h"
 
@@ -29,19 +26,24 @@ extern "C" {
 #endif
 
 /**
- * Create a base64 codec instance
- * @param inner the #ThingstreamTransport instance the codec should wrap
- * @return the new #ThingstreamTransport instance
+ * Add logging between thingstream protocol transport and the underlying transport
+ * instance.
+ *
+ * @param inner the #ThingstreamTransport instance to wrap
+ * @param log the function to use for printing to the log
+ * @param level_mask a bitmask specifying which messages to write to the log
+ * @return the new ThingstreamTransport instance
  */
-extern ThingstreamTransport* Thingstream_createBase64CodecTransport(ThingstreamTransport* inner);
+extern ThingstreamTransport* Thingstream_createProtocolLogger(ThingstreamTransport* inner, ThingstreamPrintf_t log, uint8_t level_mask);
 
 #ifndef THINGSTREAM_NO_SHORT_NAMES
 /**
  * @addtogroup legacy
  * @{
  */
-/** @deprecated   renamed to Thingstream_createBase64CodecTransport() */
-#define base64_codec_create  Thingstream_createBase64CodecTransport
+
+/** @deprecated                renamed to Thingstream_createProtocolLogger() */
+#define log_thingstream_transport_create  Thingstream_createProtocolLogger
 /** @} */
 #endif /* !THINGSTREAM_NO_SHORT_NAMES */
 
@@ -49,4 +51,4 @@ extern ThingstreamTransport* Thingstream_createBase64CodecTransport(ThingstreamT
 }
 #endif
 
-#endif /* INC_BASE64_CODEC_TRANSPORT_H_ */
+#endif /* INC_LOG_PROTOCOL_TRANSPORT_H_ */

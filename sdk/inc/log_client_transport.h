@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2018 Thingstream AG
+ * Copyright 2017-2019 Thingstream AG
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 /**
  * @file
- * @brief Transport implementation that logs thingstream requests made
+ * @brief ThingstreamTransport implementation that logs thingstream requests made
  * to the thingstream transport layer.
  */
 
@@ -33,12 +33,23 @@ extern "C" {
 
 /**
  * Add logging between client transport and the underlying transport instance.
- * @param inner the transport instance to wrap
+ * @param inner the #ThingstreamTransport instance to wrap
  * @param log the function to use for printing to the log
  * @param level_mask a bitmask specifying which messages to write to the log
- * @return the new Transport instance
+ * @return the new ThingstreamTransport instance
  */
-extern Transport* log_client_transport_create(Transport* inner, transport_logger log, uint8_t level_mask);
+extern ThingstreamTransport* Thingstream_createClientLogger(ThingstreamTransport* inner, ThingstreamPrintf_t log, uint8_t level_mask);
+
+#ifndef THINGSTREAM_NO_SHORT_NAMES
+/**
+ * @addtogroup legacy
+ * @{
+ */
+
+/** @deprecated           renamed to Thingstream_createClientLogger() */
+#define log_client_transport_create  Thingstream_createClientLogger
+/** @} */
+#endif /* !THINGSTREAM_NO_SHORT_NAMES */
 
 #if defined(__cplusplus)
 }

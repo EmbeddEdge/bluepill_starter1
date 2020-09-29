@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2019 Thingstream AG
+ * Copyright 2017-2020 Thingstream AG
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,8 +21,36 @@
 #include <stdbool.h>
 #include <stdarg.h>
 
-extern void debug_puts(const char* str, int len);
-extern int debug_vprintf(const char* fmt, va_list ap);
-extern int debug_printf(const char* fmt, ...);
+#include <thingstream_util.h>
+
+#if defined(__cplusplus)
+extern "C" {
+#elif 0
+}
+#endif
+
+/* These functions have been renamed and compiled into the SDK library */
+
+#define Platform_debug_vprintf Thingstream_Util_vprintf
+#define Platform_debug_printf  Thingstream_Util_printf
+
+#define Platform_debug_puts  Thingstream_Platform_puts
+
+#ifndef THINGSTREAM_NO_SHORT_NAMES
+
+/** @deprecated renamed to Platform_debug_puts() */
+#define debug_puts         Platform_debug_puts
+
+/** @deprecated renamed to Platform_debug_printf() */
+#define debug_printf       Platform_debug_printf
+
+/** @deprecated renamed to Platform_debug_vprintf() */
+#define debug_vprintf      Platform_debug_vprintf
+
+#endif /* !THINGSTREAM_NO_SHORT_NAMES */
+
+#if defined (__cplusplus)
+}
+#endif
 
 #endif /* INC_DEBUG_PRINTF_CORE_H_ */

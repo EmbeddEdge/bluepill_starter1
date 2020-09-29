@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 Thingstream AG
+ * Copyright 2017-2020 Thingstream AG
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 /**
  * @file
- * @brief Transport implementation that adds line buffering on callbacks
+ * @brief ThingstreamTransport implementation that adds line buffering on callbacks
  * e.g. between a serial connection and a modem driver.
  */
 
@@ -27,37 +27,123 @@
 
 #if defined(__cplusplus)
 extern "C" {
+#elif 0
+}
 #endif
 
 /**
- * Create a line transport instance that line buffers a sequence of bytes for
- * callbacks.
- * The application can create multiple instances of this Transport. However, if
- * an instance wrapping the given inner transport already exists, it will be
- * returned instead of creating a new instance.
- * The number of instances is fixed at library build time, if you need more
- * please contact Thingstream.
+ * Create a transport instance that line-buffers a sequence of bytes
+ * for callbacks.
  *
- * @param inner the inner transport instance to use
+ * The callback of this transport can be safely called from interrupt handlers.
+ *
+ * Do not mix calls to Thingstream_createLineBufferTransport() with calls to
+ * either the legacy macro line_buffer_transport_create() or
+ * the Thingstream__createLegacyLineBufferTransport() function.
+ *
+ * @param inner the inner #ThingstreamTransport instance to use
  * @param data  an area of data to use for the buffers
- * @param size  the size of the data area
- * @return an instance of the line transport
+ * @param dataSize  the size of the data area
+ * @return an instance of the line buffer transport
  */
-extern Transport* line_buffer_transport_create(Transport* inner, uint8_t* data, uint16_t size);
+extern ThingstreamTransport* Thingstream_createLineBufferTransport(ThingstreamTransport* inner, uint8_t* data, uint32_t dataSize);
 
-/** @private */
-extern Transport* line_buffer_transport_create_ex(Transport* inner, uint8_t* data, uint16_t size, uint16_t bufsize);
+/**
+ * Create a transport instance (number 2) that line-buffers a sequence of bytes
+ * for callbacks.
+ *
+ * The callback of this transport can be safely called from interrupt handlers.
+ *
+ * Do not mix calls to Thingstream_createLineBufferTransport_2() with calls to
+ * either the legacy macro line_buffer_transport_create() or
+ * the Thingstream__createLegacyLineBufferTransport() function.
+ *
+ * @param inner the inner #ThingstreamTransport instance to use
+ * @param data  an area of data to use for the buffers
+ * @param dataSize  the size of the data area
+ * @return an instance of the line buffer transport
+ */
+extern ThingstreamTransport* Thingstream_createLineBufferTransport_2(ThingstreamTransport* inner, uint8_t* data, uint32_t dataSize);
 
-/** Deliver any buffered data to the layer above.
+/**
+ * Create a transport instance (number 3) that line-buffers a sequence of bytes
+ * for callbacks.
+ *
+ * The callback of this transport can be safely called from interrupt handlers.
+ *
+ * Do not mix calls to Thingstream_createLineBufferTransport_3() with calls to
+ * either the legacy macro line_buffer_transport_create() or
+ * the Thingstream__createLegacyLineBufferTransport() function.
+ *
+ * @param inner the inner #ThingstreamTransport instance to use
+ * @param data  an area of data to use for the buffers
+ * @param dataSize  the size of the data area
+ * @return an instance of the line buffer transport
+ */
+extern ThingstreamTransport* Thingstream_createLineBufferTransport_3(ThingstreamTransport* inner, uint8_t* data, uint32_t dataSize);
+
+/**
  * @private
+ * The 'dataSize' argument to Thingstream_createLineBufferTransport() can be
+ * encoded to specify the length of the line buffer used for the callback.
+ * This helper encodes the two sizes (overall size of the data are and the
+ * length of the callback line buffer) in the format required by the
+ * Thingstream_createLineBufferTransport() apis.
+ *
+ * @param dataSize the size of the data area (must be at least twice lineLen)
+ * @param lineLen  the size of the callback buffer line
+ * @return encoded size to be passed to Thingstream_createLineBufferTransport()
+ */
+#define Thingstream__lineBufferEncodedSize(dataSize, lineLen) \
+  (dataSize | (((uint32_t)lineLen) << 16))
+
+/**
+ * @ingroup legacy
+ * @deprecated               prefer Thingstream_createLineBufferTransport()
+ *
+ * Legacy helper for line_buffer_transport_create()
+ * This api can be called multiple times to return different instances.
+ *
+ * Use of the legacy interface uses more text/data/bss than using the preferred
+ * Thingstream_createLineBufferTransport() since the legacy api includes all
+ * possible instances into the application.
+ *
+ * @param inner the inner #ThingstreamTransport instance to use
+ * @param data  an area of data to use for the buffers
+ * @param dataSize  the size of the data area
+ * @return an instance of the line buffer transport
+ */
+extern ThingstreamTransport* Thingstream__createLegacyLineBufferTransport(ThingstreamTransport* inner, uint8_t* data, uint16_t dataSize);
+
+/**
+ * @private
+ * Deliver any buffered data to the layer above.
  * Normally, this is called only by line_buffer_run(),
  * but for particular projects, the serial transport
  * might invoke it directly. Must not be called from an interrupt
  * handler.
- * @param self the Line Transport instance
- * @return an integer status code (success / fail)
+ * @param self the line buffer transport instance
+ * @return a #ThingstreamTransportResult status code (success / fail)
  */
-TransportResult line_buffer_deliver(Transport *self);
+extern ThingstreamTransportResult Thingstream_line_buffer_deliver(ThingstreamTransport *self);
+
+
+/**
+ * @private
+ * This string is returned by transport->get_client_id() and can be used to
+ * identify this transport using simple pointer comparison.
+ */
+extern const char Thingstream__lineBufferTransportIdentity[];
+
+#ifndef THINGSTREAM_NO_SHORT_NAMES
+/**
+ * @ingroup legacy
+ * @deprecated               renamed to Thingstream_createLineBufferTransport() with an extra argument
+ */
+#define line_buffer_transport_create Thingstream__createLegacyLineBufferTransport
+
+
+#endif /* !THINGSTREAM_NO_SHORT_NAMES */
 
 #if defined(__cplusplus)
 }

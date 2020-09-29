@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2019 Thingstream AG
+ * Copyright 2017-2020 Thingstream AG
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 /**
  * @file
- * @brief Transport implementation that communicates with a modem through
+ * @brief ThingstreamTransport implementation that communicates with a modem through
  * a serial connection.
  */
 
@@ -27,17 +27,11 @@
 
 #if defined(__cplusplus)
 extern "C" {
+#elif 0
+}
 #endif
 
-/**
- * Create an instance of the modem transport.
- * @param serial the serial transport instance to use
- * @param flags a set of control flags (e.g to skip initialisation of modem)
- * @return the instance
- */
-extern Transport* modem_transport_create(Transport* serial, uint8_t flags);
-
-/** When this flag is passed to modem_transport_create() then the modem
+/** When this flag is passed to Thingstream_createModemTransport() then the modem
  * transport layer will assume that the modem hardware has already been
  * initialised. This is needed when the other features of the modem hardware
  * are programmed by non-Thingstream software.
@@ -49,7 +43,7 @@ extern Transport* modem_transport_create(Transport* serial, uint8_t flags);
  * The modem will usually talk to the normal (or "live") USSD/Thingstream
  * software server stack, but occasionally the Thingstream support team
  * may request that you use the debugging rather than live stack.
- * If MODEM_STAGE_SHORTCODE is in the modem_transport_create() flags then
+ * If MODEM_STAGE_SHORTCODE is in the Thingstream_createModemTransport() flags then
  * the modem will use the stage debugging stack.
  */
 #define MODEM_STAGE_SHORTCODE  (0x02)
@@ -82,78 +76,45 @@ extern Transport* modem_transport_create(Transport* serial, uint8_t flags);
  * USSD error conditions.
  * By default the modem  driver will treat an unsolicited +CUSD:2 as an error
  * condition.
- * If the MODEM_IGNORE_PLUS_CUSD2 is in the modem_transport_create() flags then
+ * If the MODEM_IGNORE_PLUS_CUSD2 is in the Thingstream_createModemTransport() flags then
  * the modem driver will treat +CUSD:2 as informational only.
  */
 #define MODEM_IGNORE_PLUS_CUSD2  (0x10)
 
 
 /**
- * Type definition of the modem message arrived callback
- * @param cookie the cookie passed to Client_set_modem_callback()
+ * This application supplied routine will be called when the modem transport
+ * receives an unexpected response.
+ * @ingroup porting-application
  * @param response the unrecognized modem response
  * @param len the length of the response
  */
-typedef void (*Modem_callback)(void *cookie, const char* response, uint16_t len);
+void Thingstream_Application_modemCallback(const char* response, uint16_t len);
 
-/**
- * Set the function that will be called when the modem receives an
- * unrecognized response.
- * @param self this instance of modem transport
- * @param callback the Modem_callback function
- * @param cookie a caller supplied opaque item passed when callback is called.
- */
-void Modem_set_modem_callback(Transport* self, Modem_callback callback, void* cookie);
-
-/**
- * Clear the function that will be called when the transport layer receive an
- * unrecognized response.
- * Note that calling this will indicate to the stack that the client no longer
- * wishes to accept unrecognized responses from the modem.
- * @param self this instance of modem transport
- */
-void Modem_clear_modem_callback(Transport* self);
-
-/**
- * Send the line to the modem and wait for an OK response.
- *
- * @param self this instance of modem transport
- * @param line a null-terminated line to send to the modem ("\r\n" will be added)
- * @param millis the maximum number of milliseconds to run
- * @return an integer status code (success / fail)
- */
-TransportResult Modem_send_line(Transport* self, const char* line, uint32_t millis);
 
 /** See modem_init_string.c */
-extern const char ModemInitString[];
+extern const char Thingstream_Modem_initString[];
 
 /** See modem_init_string.c */
-extern const char ModemInformationString[];
+extern const char Thingstream_Modem_informationString[];
 
 /** See modem_init_string.c */
-extern const char ModemUssdEndSessionString[];
+extern const char Thingstream_Modem_ussdEndSessionString[];
 
 /** See modem_init_string.c */
-extern const char ModemForceResetString[];
+extern const char Thingstream_Modem_clearFplmnString[];
 
-/**
- * Return the number of accumulated +CUSD: errors.
- *
- * @param self this Transport instance
- * @param andClear if non-zero, then clear the count.
- * @return the number of accumulated +CUSD: errors.
- */
-uint32_t Modem_get_CUSD_errors(Transport* self, uint32_t andClear);
+/** See modem_init_string.c */
+extern const char Thingstream_Modem_forceResetString[];
 
-/**
- * Return the number of accumulated serious errors (those that trigger
- * a modem reset to recover)
- *
- * @param self this Transport instance
- * @param andClear if non-zero, then clear the count.
- * @return the number of accumulated serious errors.
- */
-uint32_t Modem_get_serious_errors(Transport* self, uint32_t andClear);
+/** For compatibility include the original USSD only modem definitions */
+#include "modem_ussd_transport.h"
+
+/** To simplify the user's source include the new USSD/UDP definitions */
+#include "modem2_transport.h"
+
+/* Include backward compatibility APIs to set callbacks */
+#include "modem_set_callback.h"
 
 #if defined(__cplusplus)
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2019 Thingstream AG
+ * Copyright 2017-2020 Thingstream AG
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,17 +28,17 @@ extern "C" {
 #endif
 
 /* UART callback */
-static TransportResult serial_init(Transport* self, uint16_t version);
-static TransportResult serial_shutdown(Transport* self);
-static TransportResult serial_get_buffer(Transport* self, uint8_t** buffer, uint16_t* len);
-static const char* serial_get_client_id(Transport* self);
-static TransportResult serial_send(Transport* self, uint16_t flags, uint8_t* data, uint16_t len, uint32_t timeout);
-static TransportResult serial_register_callback(Transport* self, Transport_callback callback, void* cookie);
-static TransportResult serial_deregister_callback(Transport* self);
-static TransportResult serial_run(Transport* self, uint32_t millis);
+static ThingstreamTransportResult serial_init(ThingstreamTransport* self, uint16_t version);
+static ThingstreamTransportResult serial_shutdown(ThingstreamTransport* self);
+static ThingstreamTransportResult serial_get_buffer(ThingstreamTransport* self, uint8_t** buffer, uint16_t* len);
+static const char* serial_get_client_id(ThingstreamTransport* self);
+static ThingstreamTransportResult serial_send(ThingstreamTransport* self, uint16_t flags, uint8_t* data, uint16_t len, uint32_t timeout);
+static ThingstreamTransportResult serial_register_callback(ThingstreamTransport* self, ThingstreamTransportCallback_t callback, void* cookie);
+static ThingstreamTransportResult serial_deregister_callback(ThingstreamTransport* self);
+static ThingstreamTransportResult serial_run(ThingstreamTransport* self, uint32_t millis);
 
 typedef struct {
-    Transport_callback callback;
+    ThingstreamTransportCallback_t callback;
     void* cookie;
     UART_HandleTypeDef* huart;
     uint8_t isr_received_data;
@@ -47,8 +47,8 @@ typedef struct {
 
 static SerialState _serial_transport_state;
 
-static const Transport _serial_instance = {
-    (TransportState*)&_serial_transport_state,
+static const ThingstreamTransport _serial_instance = {
+    (ThingstreamTransportState_t*)&_serial_transport_state,
     serial_init,
     serial_shutdown,
     serial_get_buffer,
@@ -89,7 +89,7 @@ static void serial_ErrorCallback(UART_HandleTypeDef *huart)
     /* Clear any errors and restart the interrupt transfer */
     HAL_UART_Abort_IT(huart);
     try_enable_rx_irq(state);
-    /* TODO: Report the error to the Transport stack */
+    /* TODO: Report the error to the ThingstreamTransport stack */
 }
 
 #if (USE_HAL_UART_REGISTER_CALLBACKS == 1)
@@ -132,9 +132,9 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 }
 #endif /* USE_HAL_UART_REGISTER_CALLBACKS */
 
-Transport* serial_transport_create(UART_HandleTypeDef* port)
+ThingstreamTransport* serial_transport_create(UART_HandleTypeDef* port)
 {
-    Transport *self = (Transport*)&_serial_instance;
+    ThingstreamTransport *self = (ThingstreamTransport*)&_serial_instance;
     SerialState *state = (SerialState*)self->_state;
     state->huart = port;
 
@@ -148,7 +148,7 @@ Transport* serial_transport_create(UART_HandleTypeDef* port)
     return self;
 }
 
-static TransportResult serial_init(Transport* self, uint16_t version)
+static ThingstreamTransportResult serial_init(ThingstreamTransport* self, uint16_t version)
 {
     SerialState *state = (SerialState*)self->_state;
 
@@ -162,14 +162,14 @@ static TransportResult serial_init(Transport* self, uint16_t version)
     return (state->isr_rx_restart == 0 ? TRANSPORT_SUCCESS : TRANSPORT_ERROR);
 }
 
-static TransportResult serial_shutdown(Transport* self)
+static ThingstreamTransportResult serial_shutdown(ThingstreamTransport* self)
 {
     SerialState *state = (SerialState*)self->_state;
     (void) HAL_UART_Abort_IT(state->huart);
     return TRANSPORT_SUCCESS;
 }
 
-static TransportResult serial_get_buffer(Transport* self, uint8_t** buffer, uint16_t* len)
+static ThingstreamTransportResult serial_get_buffer(ThingstreamTransport* self, uint8_t** buffer, uint16_t* len)
 {
     /* This will not be called when using the mandatory line buffer transport.
      * When called in any other context returns an error.
@@ -178,24 +178,24 @@ static TransportResult serial_get_buffer(Transport* self, uint8_t** buffer, uint
     return TRANSPORT_ERROR;
 }
 
-static const char* serial_get_client_id(Transport* self)
+static const char* serial_get_client_id(ThingstreamTransport* self)
 {
     return "stm32-client";
 }
 
-static TransportResult serial_send(Transport* self, uint16_t flags, uint8_t* data, uint16_t len, uint32_t timeout)
+static ThingstreamTransportResult serial_send(ThingstreamTransport* self, uint16_t flags, uint8_t* data, uint16_t len, uint32_t timeout)
 {
     SerialState *state = (SerialState*)self->_state;
-    TransportResult tRes = TRANSPORT_SUCCESS;
+    ThingstreamTransportResult tRes = TRANSPORT_SUCCESS;
     if (HAL_OK == HAL_UART_Transmit_IT(state->huart, data, len))
     {
         /* Wait for the Transmit to complete */
-        uint32_t limit = Platform_getTimeMillis() + timeout;
+        uint32_t limit = Thingstream_Platform_getTimeMillis() + timeout;
         UART_HandleTypeDef* huart = state->huart;
         while ((HAL_UART_GetState(huart) & HAL_UART_STATE_BUSY_TX)
                                         == HAL_UART_STATE_BUSY_TX)
         {
-            if (TIME_COMPARE(Platform_getTimeMillis(), >=, limit))
+            if (TIME_COMPARE(Thingstream_Platform_getTimeMillis(), >=, limit))
             {
                 HAL_UART_AbortTransmit_IT(state->huart);
                 tRes = TRANSPORT_SEND_TIMEOUT;
@@ -215,7 +215,7 @@ static TransportResult serial_send(Transport* self, uint16_t flags, uint8_t* dat
     return tRes;
 }
 
-static TransportResult serial_register_callback(Transport* self, Transport_callback callback, void* cookie)
+static ThingstreamTransportResult serial_register_callback(ThingstreamTransport* self, ThingstreamTransportCallback_t callback, void* cookie)
 {
     SerialState *state = (SerialState*)self->_state;
     state->callback = callback;
@@ -223,14 +223,14 @@ static TransportResult serial_register_callback(Transport* self, Transport_callb
     return TRANSPORT_SUCCESS;
 }
 
-static TransportResult serial_deregister_callback(Transport* self)
+static ThingstreamTransportResult serial_deregister_callback(ThingstreamTransport* self)
 {
     SerialState *state = (SerialState*)self->_state;
     state->callback = NULL;
     return TRANSPORT_SUCCESS;
 }
 
-static TransportResult serial_run(Transport* self, uint32_t millis)
+static ThingstreamTransportResult serial_run(ThingstreamTransport* self, uint32_t millis)
 {
     /* This will be called by the line buffer transport when waiting for data.
      * It is difficult to safely wait for the next complete line (which may

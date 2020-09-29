@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2019 Thingstream AG
+ * Copyright 2017-2020 Thingstream AG
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,13 @@
 #include <string.h>
 
 #include "client_api.h"
-#include "line_buffer_transport.h"
+#include "ring_buffer_transport.h"
 #include "modem_transport.h"
 #include "base64_codec_transport.h"
 #include "thingstream_transport.h"
+#include "thingstream_util.h"
 #include "client_platform.h"
-
-#include "debug_printf_core.h"
+#include "modem2_config.h"
 
 #include "log_client_transport.h"
 #include "log_modem_transport.h"
@@ -41,16 +41,29 @@ extern "C" {
 #define DEBUG_LOG_MODEM 1
 #define DEBUG_LOG_CLIENT 1
 
-#define THINGSTREAM_BUFFER_LENGTH 512
-static uint8_t thingstream_buffer[THINGSTREAM_BUFFER_LENGTH];
+/* ------------ SETUP to use UDP or USSD ---------------- */
+/* Specify the modem initialisation routine to be passed
+ * to Thingstream_createModem2Transport() for UDP.
+ * Undefine to use USSD.
+ */
+#define THINGSTREAM_UDP_MODEM Thingstream_Simcom800Init
+#undef THINGSTREAM_UDP_MODEM            /* for USSD */            
 
-#define LINE_BUFFER_LENGTH 300
-static uint8_t line_buffer[LINE_BUFFER_LENGTH];
+#ifdef THINGSTREAM_UDP_MODEM
+#define THINGSTREAM_MODEM_INIT THINGSTREAM_UDP_MODEM
+static uint8_t modemBuf[1000];
+#else
+#define THINGSTREAM_MODEM_INIT Thingstream_UssdInit
+static uint8_t modemBuf[MODEM2_USSD_BUFFER_LEN];
+#endif
 
+static uint8_t ringBuf[250];
+
+#define EXAMPLE_TOPIC "test/stm32/first"
 static uint16_t exampleTopicId = 0; /* will get updated after registration */
 
 #define CHECK(msg, cond) do { \
-    debug_printf("%s %s @%d\n", msg, ((cond) ? "ok" : "ERROR"), __LINE__); \
+    Thingstream_Util_printf("%s %s @%d\n", msg, ((cond) ? "ok" : "ERROR"), __LINE__); \
     if (!(cond)) goto error; \
   } while(0)
 
@@ -58,13 +71,13 @@ static bool done = false;
 static UART_HandleTypeDef *debug_output;
 
 /* Thingstream required routine, see client_platform.h */
-uint32_t Platform_getTimeMillis(void)
+uint32_t Thingstream_Platform_getTimeMillis(void)
 {
     return HAL_GetTick();
 }
 
 /* Used by debug logging */
-void debug_puts(const char* str, int len)
+void Thingstream_Platform_puts(const char* str, int len)
 {
     if (debug_output != NULL)
     {
@@ -73,17 +86,20 @@ void debug_puts(const char* str, int len)
 }
 
 /* Callback for receiving messages.
- * This will be called from within Client_run()
+ * This will be called from within Thingstream_Client_run()
  */
-static void receiveCallback(void *cookie, Topic topic, QOS qos, uint8_t* msg, uint16_t msgLen)
+void Thingstream_Application_subscribeCallback(ThingstreamTopic topic,
+     ThingstreamQualityOfService_t qos, uint8_t* msg, uint16_t msgLen)
 {
     if (msgLen > 0)
     {
-        debug_printf("Received message: %s\n", msg);
+        Thingstream_Util_printf("Received message: ");
+        Thingstream_Platform_puts((const char *)msg, msgLen);
+        Thingstream_Util_printf("\n");
     }
     else
     {
-        debug_printf("Received empty message");
+        Thingstream_Util_printf("Received empty message\n");
     }
     if (topic.topicId == exampleTopicId)
     {
@@ -102,40 +118,47 @@ void runApplication(UART_HandleTypeDef *modem_uart, UART_HandleTypeDef *debug_ua
 {
     debug_output = debug_uart;  /* setup uart handle for debug output */
 
-    Transport* transport = serial_transport_create(modem_uart);
+    ThingstreamTransport* transport = serial_transport_create(modem_uart);
     CHECK("serial", transport != NULL);
 
-    transport = line_buffer_transport_create(transport, line_buffer, LINE_BUFFER_LENGTH);
-    CHECK("linebuf", transport != NULL);
+    transport = Thingstream_createRingBufferTransport(transport, ringBuf,
+                                                        sizeof(ringBuf));
+    CHECK("ringbuf", transport != NULL);
 
 #if (defined(DEBUG_LOG_MODEM) && (DEBUG_LOG_MODEM > 0))
-    transport = log_modem_transport_create(transport, debug_printf, 0xFF);
+    transport = Thingstream_createModemLogger(transport, Thingstream_Util_printf, 0xFF);
     CHECK("log_modem", transport != NULL);
 #endif /* DEBUG_LOG_MODEM */
 
-    Transport* modem = modem_transport_create(transport, 0);
+    ThingstreamTransport* modem = Thingstream_createModem2Transport(transport,
+                                                0,
+                                                modemBuf, sizeof(modemBuf),
+                                                THINGSTREAM_MODEM_INIT,
+                                                Thingstream_Util_printf);
     CHECK("modem", modem != NULL);
 
-    transport = base64_codec_create(modem);
+    transport = Thingstream_createBase64CodecTransport(modem);
     CHECK("base64", transport != NULL);
 
-    transport = thingstream_transport_create(transport, thingstream_buffer, THINGSTREAM_BUFFER_LENGTH);
+    transport = Thingstream_createProtocolTransport(transport, NULL, 0);
     CHECK("thingstream", transport != NULL);
 
 #if (defined(DEBUG_LOG_CLIENT) && (DEBUG_LOG_CLIENT > 0))
-    transport = log_client_transport_create(transport, debug_printf, 0xFF);
+    transport = Thingstream_createClientLogger(transport, Thingstream_Util_printf, 0xFF);
     CHECK("log_client", transport != NULL);
 #endif /* DEBUG_LOG_CLIENT */
 
-    Client* client = Client_create(transport, NULL);
+    ThingstreamClient* client = Thingstream_createClient(transport);
     CHECK("client", client != NULL);
+
+    ThingstreamClientResult cr = Thingstream_Client_init(client);
+    CHECK("client init", cr == CLIENT_SUCCESS);
 
     if (client != NULL)
     {
-        Topic topic;
-        ClientResult cr;
+        ThingstreamTopic topic;
 
-        cr = Client_connect(client, true, NULL, NULL);
+        cr = Thingstream_Client_connect(client, true, 0, NULL);
         CHECK("connect", cr == CLIENT_SUCCESS);
 
         /* Registration is redundant here, since subscribeName can
@@ -143,26 +166,26 @@ void runApplication(UART_HandleTypeDef *modem_uart, UART_HandleTypeDef *debug_ua
          * Typical applications might not subscribe to topics they
          * publish to, so this is included here for illustration.
          */
-        cr = Client_register(client, EXAMPLE_TOPIC, &topic);
+        cr = Thingstream_Client_register(client, EXAMPLE_TOPIC, &topic);
         CHECK("register", cr == CLIENT_SUCCESS);
         exampleTopicId = topic.topicId;
 
-        Client_set_subscribe_callback(client, receiveCallback, NULL);
+        Thingstream_Client_setSubscribeCallback(client, Thingstream_Application_subscribeCallback, NULL);
 
         /* subscribe to the same message to receive it back by the server */
-        cr = Client_subscribeName(client, EXAMPLE_TOPIC, MQTT_QOS1, NULL);
+        cr = Thingstream_Client_subscribeName(client, EXAMPLE_TOPIC, ThingstreamQOS1, NULL);
         CHECK("subscribe", cr == CLIENT_SUCCESS);
 
-        char *msg = "Hello from STM32";
-        cr = Client_publish(client, topic, MQTT_QOS1, false, (uint8_t*) msg, strlen(msg), NULL);
+        char *msg = "Hello from STM32 SDK2";
+        cr = Thingstream_Client_publish(client, topic, ThingstreamQOS1, false, (uint8_t*) msg, strlen(msg));
         CHECK("publish", cr == CLIENT_SUCCESS);
 
         while (!done)
         {
             /* poll for incoming messages */
-            Client_run(client, 1000);
+            Thingstream_Client_run(client, 1000);
         }
-        cr = Client_disconnect(client, 0);
+        cr = Thingstream_Client_disconnect(client, 0);
         CHECK("disconnect", cr == CLIENT_SUCCESS);
     }
 
@@ -175,44 +198,51 @@ error:
  * @param modem_uart A handle to the serial port to use for the modem
  * @param debug_uart A handle to the serial port to use for debug output.
  *                   If NULL, then no debug output
+ * * Returns the ThingstreamClient that has been configured
  */
-Client* setupTSStack(UART_HandleTypeDef *modem_uart, UART_HandleTypeDef *debug_uart)
+ThingstreamClient* setupTSStack(UART_HandleTypeDef *modem_uart, UART_HandleTypeDef *debug_uart)
 {
     debug_output = debug_uart;  /* setup uart handle for debug output */
 
-    Transport* transport = serial_transport_create(modem_uart);
+    ThingstreamTransport* transport = serial_transport_create(modem_uart);
     CHECK("serial", transport != NULL);
 
-    transport = line_buffer_transport_create(transport, line_buffer, LINE_BUFFER_LENGTH);
-    CHECK("linebuf", transport != NULL);
+    transport = Thingstream_createRingBufferTransport(transport, ringBuf,
+                                                        sizeof(ringBuf));
+    CHECK("ringbuf", transport != NULL);
 
 #if (defined(DEBUG_LOG_MODEM) && (DEBUG_LOG_MODEM > 0))
-    transport = log_modem_transport_create(transport, debug_printf, 0xFF);
+    transport = Thingstream_createModemLogger(transport, Thingstream_Util_printf, 0xFF);
     CHECK("log_modem", transport != NULL);
 #endif /* DEBUG_LOG_MODEM */
 
-    Transport* modem = modem_transport_create(transport, 0);
+    ThingstreamTransport* modem = Thingstream_createModem2Transport(transport,
+                                                0,
+                                                modemBuf, sizeof(modemBuf),
+                                                THINGSTREAM_MODEM_INIT,
+                                                Thingstream_Util_printf);
     CHECK("modem", modem != NULL);
 
-    transport = base64_codec_create(modem);
+    transport = Thingstream_createBase64CodecTransport(modem);
     CHECK("base64", transport != NULL);
 
-    transport = thingstream_transport_create(transport, thingstream_buffer, THINGSTREAM_BUFFER_LENGTH);
+    transport = Thingstream_createProtocolTransport(transport, NULL, 0);
     CHECK("thingstream", transport != NULL);
 
 #if (defined(DEBUG_LOG_CLIENT) && (DEBUG_LOG_CLIENT > 0))
-    transport = log_client_transport_create(transport, debug_printf, 0xFF);
+    transport = Thingstream_createClientLogger(transport, Thingstream_Util_printf, 0xFF);
     CHECK("log_client", transport != NULL);
 #endif /* DEBUG_LOG_CLIENT */
 
-    Client* client = Client_create(transport, NULL);
+    ThingstreamClient* client = Thingstream_createClient(transport);
     CHECK("client", client != NULL);
+
+    ThingstreamClientResult cr = Thingstream_Client_init(client);
+    CHECK("client init", cr == CLIENT_SUCCESS);
 
     while(client!=NULL)
     {
-        ClientResult cr;
-
-        cr = Client_connect(client, true, NULL, NULL);
+        cr = Thingstream_Client_connect(client, true, 0, NULL);
         CHECK("connect", cr == CLIENT_SUCCESS);
         break;
         //HAL_Delay(100);
@@ -226,32 +256,32 @@ error:
 
 /*
  * Subscribe to a Topic.
- * @param p_client A Client instance that was configured in a previous function
+ * @param p_client A ThingstreamClient instance that was configured in a previous function
  * @param debug_uart A handle to the serial port to use for debug output.
  *                   If NULL, then no debug output
  * Returns the Topic that has been registered and subscribed to
  */
-Topic subscribeTopic(Client* p_client, char* p_topicName)
+ThingstreamTopic subscribeTopic(ThingstreamClient* p_client, char* p_topicName)
 {
-    Topic topic;
+    ThingstreamTopic topic;
 
     if (p_client != NULL)
     {
-        ClientResult cr;
+        ThingstreamClientResult cr;
 
         /* Registration is redundant here, since subscribeName can
          * also return the Id.
          * Typical applications might not subscribe to topics they
          * publish to, so this is included here for illustration.
          */
-        cr = Client_register(p_client, p_topicName, &topic);
+        cr = Thingstream_Client_register(p_client, p_topicName, &topic);
         CHECK("register", cr == CLIENT_SUCCESS);
         exampleTopicId = topic.topicId;
 
-        Client_set_subscribe_callback(p_client, receiveCallback, NULL);
+        Thingstream_Client_setSubscribeCallback(p_client, Thingstream_Application_subscribeCallback, NULL);
 
         /* subscribe to the same message to receive it back by the server */
-        cr = Client_subscribeName(p_client, p_topicName, MQTT_QOS1, NULL);
+        cr = Thingstream_Client_subscribeName(p_client, p_topicName, ThingstreamQOS1, NULL);
         CHECK("subscribe", cr == CLIENT_SUCCESS);
 
     }
@@ -263,17 +293,17 @@ error:
 
 /*
  * Use the Thingstream stack to publish a message.
- * @param p_client A Client instance that was configured in a previous function
+ * @param p_client A ThingstreamClient instance that was configured in a previous function
  * @param debug_uart A handle to the serial port to use for debug output.
  *                   If NULL, then no debug output
  */
-void publishMessage(Client* p_client, Topic p_Topic, char* p_msg)
+void publishMessage(ThingstreamClient* p_client, ThingstreamTopic p_Topic, char* p_msg)
 {
 
     if (p_client != NULL)
     {
         //Topic topic;
-        ClientResult cr;
+        ThingstreamClientResult cr;
 
         //cr = Client_connect(p_client, true, NULL, NULL);
         //CHECK("connect", cr == CLIENT_SUCCESS);
@@ -293,8 +323,8 @@ void publishMessage(Client* p_client, Topic p_Topic, char* p_msg)
         //cr = Client_subscribeName(p_client, EXAMPLE_TOPIC, MQTT_QOS1, NULL);
         //CHECK("subscribe", cr == CLIENT_SUCCESS);
 
-        //char *msg = "Hello from STM32";
-        cr = Client_publish(p_client, p_Topic, MQTT_QOS1, false, (uint8_t*) p_msg, strlen(p_msg), NULL);
+        //char *msg = "Hello from STM32 SDK2";
+        cr = Thingstream_Client_publish(p_client, p_Topic, ThingstreamQOS1, false, (uint8_t*) p_msg, strlen(p_msg));
         CHECK("publish", cr == CLIENT_SUCCESS);
 
         while (!done)
@@ -312,9 +342,9 @@ error:
 
 /*
  * Wait to recieve a message from the subscribed Topic.
- * @param p_client A Client instance that was configured in a previous function
+ * @param p_client A ThingstreamClient instance that was configured in a previous function
  */
-void waitForMessage(Client* p_client)
+void waitForMessage(ThingstreamClient* p_client)
 {
 
     if (p_client != NULL)
@@ -322,7 +352,7 @@ void waitForMessage(Client* p_client)
         while (!done)
         {
             /* poll for incoming messages */
-            Client_run(p_client, 10000);
+            Thingstream_Client_run(p_client, 10000);
         }
         return;
     }
@@ -335,14 +365,14 @@ error:
  * Disconnect the client connection.
  * @param p_client A Client instance that was configured in a previous function
  */
-void disconnectClient(Client* p_client)
+void disconnectClient(ThingstreamClient* p_client)
 {
 
     if (p_client != NULL)
     {
         ClientResult cr;
 
-        cr = Client_disconnect(p_client, 0);
+        cr = Thingstream_Client_disconnect(p_client, 0);
         CHECK("disconnect", cr == CLIENT_SUCCESS);
     }
 

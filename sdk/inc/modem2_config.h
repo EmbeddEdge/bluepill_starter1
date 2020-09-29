@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2019 Thingstream AG
+ * Copyright 2020 Thingstream AG
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,22 +16,17 @@
 
 /**
  * @file
- * @brief Deprecated - the connection timeout is now passed as a parameter to Thingstream_client_connect()
+ * @brief Configuration files for modems with UDP support in the Thingstream SDK
  */
 
-#include <stdint.h>
-#include <client_api.h>
+#ifndef INC_MODEM2_CONFIG_H
+#define INC_MODEM2_CONFIG_H
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
+#include "quectel_modem2_config.h"
+#include "sim7000_modem2_config.h"
+#include "sim7600_modem2_config.h"
+#include "sim800_modem2_config.h"
+#include "sim868_modem2_config.h"
+#include "ublox_modem2_config.h"
 
-/*
- * @deprecated This is used by the compatabilty macro Client_connect() but
- * not when Thingstream_Client_connect() is used.
- */
-uint16_t Thingstream_Client_connectionTimeout = THINGSTREAM_DEFAULT_CONNECT_KEEPALIVE;
-
-#if defined(__cplusplus)
-}
-#endif
+#endif /* INC_MODEM2_CONFIG_H */

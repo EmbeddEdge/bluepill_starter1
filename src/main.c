@@ -53,8 +53,8 @@ UART_HandleTypeDef huart2;
 PCD_HandleTypeDef hpcd_USB_FS;
 
 /* USER CODE BEGIN PV */
-Client* g_client;
-Topic g_topic;
+ThingstreamClient* g_client;
+ThingstreamTopic g_topic;
 uint8_t status;
 uint8_t g_buttCode = 0;
 char readBuf[1];

@@ -16,7 +16,7 @@
 
 /**
  * @file
- * @brief Modem initialisation string
+ * @brief Modem reset string
  *
  * This file defines a modem initialisation string used by the
  * Thingstream SDK and is provided for use (or modification) by customers.
@@ -31,26 +31,17 @@ extern "C" {
 #endif
 
 /**
- * This string is used to initialise the modem.
- * Each entry in the string is terminated by "\n".
+ * This string is used to reset the modem after a serious problem has been
+ * detected. Each entry in the string is terminated by "\n".
  * If an entry starts with a "?" then the "?" is not passed to the modem, but
  * any ERROR (or +CME ERROR:) produced will be ignored.
- * An entry of the form ~n inserts a delay of n ms into the sequence.
+ *
+ * If the forced reset is successful it will be followed by the normal commands
+ * used to initialise the modem.
  */
-const char Thingstream_Modem_initString[] =
-    "ATZ\n"            /* Reset Default Configuration */
-    "~100\n"           /* Wait 100 ms before proceeding */
-    "ATE0\n"           /* Set command echo mode (off) */
-    "AT+CMEE=2\n"      /* Report Mobile Equipment Error */
-    "?AT+CREG=2\n"     /* Network Registration (+location) */
-    "?AT+CUSD=1\n"     /* USSD Enable result codes (not needed for UDP) */
-    "?AT+CUSD=2\n"     /* USSD Cancel session (some modems only) */
-    "?AT&W\n"          /* Store Active Profile (in case spontaneous restart) */
-    "AT+CREG?\n"       /* Network Registration (current state)
-                        *    This must follow AT+CREG=2 above for
-                        *    the modem transport to finish the
-                        *    initialisation.
-                        */
+const char Thingstream_Modem_forceResetString[] =
+    "AT+CFUN=1,1\n"    /* Set Phone Functionality (reset, then full function) */
+    "~5000\n"          /* Allow the modem to restart before we continue */
      ;
 
 #if defined(__cplusplus)

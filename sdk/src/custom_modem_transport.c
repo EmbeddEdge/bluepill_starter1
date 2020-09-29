@@ -16,7 +16,7 @@
 
 /**
  * @file
- * @brief Transport implementation that communicates with a custom modem
+ * @brief ThingstreamTransport implementation that communicates with a custom modem
  */
 
 #include <stddef.h>
@@ -53,9 +53,9 @@ typedef struct {
      * cookies.
      */
     struct {
-        Transport_callback transport;
+        ThingstreamTransportCallback_t transport;
         void* tcookie;
-        Modem_callback modem;
+        ThingstreamModemCallback_t modem;
         void* mcookie;
     } callback;
 
@@ -67,24 +67,23 @@ typedef struct {
 
 static CustomModemState _custom_modem_transport_state;
 
-static TransportResult custom_modem_init(Transport* self, uint16_t version);
-static TransportResult custom_modem_shutdown(Transport* self);
-static TransportResult custom_modem_get_buffer(Transport* self, uint8_t** buffer, uint16_t* len);
-static const char* custom_modem_get_client_id(Transport* self);
-static TransportResult custom_modem_send(Transport* self, uint16_t flags, uint8_t* data, uint16_t len, uint32_t millis);
-static TransportResult custom_modem_register_transport_callback(Transport* self, Transport_callback callback, void* cookie);
-static TransportResult custom_modem_deregister_transport_callback(Transport* self);
-static TransportResult custom_modem_run(Transport* self, uint32_t millis);
+static ThingstreamTransportResult custom_modem_init(ThingstreamTransport* self, uint16_t version);
+static ThingstreamTransportResult custom_modem_shutdown(ThingstreamTransport* self);
+static ThingstreamTransportResult custom_modem_get_buffer(ThingstreamTransport* self, uint8_t** buffer, uint16_t* len);
+static const char* custom_modem_get_client_id(ThingstreamTransport* self);
+static ThingstreamTransportResult custom_modem_send(ThingstreamTransport* self, uint16_t flags, uint8_t* data, uint16_t len, uint32_t millis);
+static ThingstreamTransportResult custom_modem_register_transport_callback(ThingstreamTransport* self, ThingstreamTransportCallback_t callback, void* cookie);
+static ThingstreamTransportResult custom_modem_run(ThingstreamTransport* self, uint32_t millis);
 
-static const Transport _custom_modem_transport_instance = {
-    (TransportState*)&_custom_modem_transport_state,
+static const ThingstreamTransport _custom_modem_transport_instance = {
+    (ThingstreamTransportState_t*)&_custom_modem_transport_state,
     custom_modem_init,
     custom_modem_shutdown,
     custom_modem_get_buffer,
     custom_modem_get_client_id,
     custom_modem_send,
     custom_modem_register_transport_callback,
-    custom_modem_deregister_transport_callback,
+    NULL,
     custom_modem_run
 };
 
@@ -94,9 +93,9 @@ static const Transport _custom_modem_transport_instance = {
  * TODO: @param ?
  * @return the instance
  */
-Transport* custom_modem_transport_create(/* porting specific options */)
+ThingstreamTransport* Thingstream_createCustom_modemTransport(/* porting specific options */)
 {
-    Transport *self = (Transport*)&_custom_modem_transport_instance;
+    ThingstreamTransport *self = (ThingstreamTransport*)&_custom_modem_transport_instance;
     CustomModemState* state = (CustomModemState*)self->_state;
 
     /* TODO: save any porting specific options in state->xxx */
@@ -104,9 +103,9 @@ Transport* custom_modem_transport_create(/* porting specific options */)
     return self;
 }
 
-static TransportResult custom_modem_init(Transport* self, uint16_t version)
+static ThingstreamTransportResult custom_modem_init(ThingstreamTransport* self, uint16_t version)
 {
-    TransportResult tRes = TRANSPORT_SUCCESS;
+    ThingstreamTransportResult tRes = TRANSPORT_SUCCESS;
     CustomModemState* state = (CustomModemState*)self->_state;
 
     if (version != TRANSPORT_VERSION)
@@ -122,9 +121,9 @@ static TransportResult custom_modem_init(Transport* self, uint16_t version)
     return tRes;
 }
 
-static TransportResult custom_modem_shutdown(Transport* self)
+static ThingstreamTransportResult custom_modem_shutdown(ThingstreamTransport* self)
 {
-    TransportResult tRes = TRANSPORT_SUCCESS;
+    ThingstreamTransportResult tRes = TRANSPORT_SUCCESS;
     CustomModemState* state = (CustomModemState*)self->_state;
 
     state->callback.transport = NULL;
@@ -137,7 +136,7 @@ static TransportResult custom_modem_shutdown(Transport* self)
     return tRes;
 }
 
-static TransportResult custom_modem_get_buffer(Transport* self, uint8_t** buffer, uint16_t* len)
+static ThingstreamTransportResult custom_modem_get_buffer(ThingstreamTransport* self, uint8_t** buffer, uint16_t* len)
 {
     CustomModemState* state = (CustomModemState*)self->_state;
     *buffer = state->buffer;
@@ -145,15 +144,15 @@ static TransportResult custom_modem_get_buffer(Transport* self, uint8_t** buffer
     return TRANSPORT_SUCCESS;
 }
 
-static const char* custom_modem_get_client_id(Transport* self)
+static const char* custom_modem_get_client_id(ThingstreamTransport* self)
 {
     /* This API is currently unused */
     return "custom-modem-id";
 }
 
-static TransportResult custom_modem_send(Transport* self, uint16_t flags, uint8_t* data, uint16_t len, uint32_t millis)
+static ThingstreamTransportResult custom_modem_send(ThingstreamTransport* self, uint16_t flags, uint8_t* data, uint16_t len, uint32_t millis)
 {
-    TransportResult tRes = TRANSPORT_SUCCESS;
+    ThingstreamTransportResult tRes = TRANSPORT_SUCCESS;
     CustomModemState* state = (CustomModemState*)self->_state;
 
     /* TODO:
@@ -180,7 +179,7 @@ static TransportResult custom_modem_send(Transport* self, uint16_t flags, uint8_
     return tRes;
 }
 
-static TransportResult custom_modem_register_transport_callback(Transport* self, Transport_callback callback, void* cookie)
+static ThingstreamTransportResult custom_modem_register_transport_callback(ThingstreamTransport* self, ThingstreamTransportCallback_t callback, void* cookie)
 {
     CustomModemState* state = (CustomModemState*)self->_state;
     state->callback.transport = callback;
@@ -188,16 +187,9 @@ static TransportResult custom_modem_register_transport_callback(Transport* self,
     return TRANSPORT_SUCCESS;
 }
 
-static TransportResult custom_modem_deregister_transport_callback(Transport* self)
+static ThingstreamTransportResult custom_modem_run(ThingstreamTransport* self, uint32_t millis)
 {
-    CustomModemState* state = (CustomModemState*)self->_state;
-    state->callback.transport = NULL;
-    return TRANSPORT_SUCCESS;
-}
-
-static TransportResult custom_modem_run(Transport* self, uint32_t millis)
-{
-    TransportResult tRes = TRANSPORT_SUCCESS;
+    ThingstreamTransportResult tRes = TRANSPORT_SUCCESS;
     CustomModemState* state = (CustomModemState*)self->_state;
 
     /* TODO:
@@ -206,18 +198,19 @@ static TransportResult custom_modem_run(Transport* self, uint32_t millis)
      * modem would see these as +CUSD: <n>,"<payload>") and use the registered
      * callback to send the <payload> to the Thingstream transport stack.
      * The callback must not be called unless custom_modem_run() is being
-     * called by the Thingstream transport stack, or Modem_send_line() is being
-     * called which can contain an internal call to custom_modem_run().
+     * called by the Thingstream transport stack, or
+     * Thingstream_Modem_sendLine() is being called which can contain
+     * an internal call to custom_modem_run().
      *
-     * If Modem_send_line() and Modem_set_modem_callback() are supported then
-     * any unsolicited incoming responses that are not USSD messages and are not
-     * expected by the custom modem internals should be sent to the registered
-     * Modem_callback.
+     * If Thingstream_Modem_sendLine() and Thingstream_Modem_setCallback()
+     * are supported then any unsolicited incoming responses that are
+     * not USSD messages and are not expected by the custom modem
+     * internals should be sent to the registered callback function.
      *
      * Wait no longer than 'millis' for incoming messages before returning.
      *
      * Unexpected "incoming" errors can be reported by returning a
-     * TransportResult error code.
+     * #ThingstreamTransportResult error code.
      */
 
     return tRes;
@@ -227,42 +220,28 @@ static TransportResult custom_modem_run(Transport* self, uint32_t millis)
 /**
  * Set the function that will be called when the modem receives an
  * unrecognized response.
- * @param self the Transport instance of this custom modem
- * @param callback the Modem_callback function
+ * @param self the ThingstreamTransport instance of this custom modem
+ * @param callback the ThingstreamModemCallback_t function
  * @param cookie a caller supplied opaque item passed when callback is called.
  */
-void Modem_set_modem_callback(Transport* self, Modem_callback callback, void* cookie)
+void Thingstream_Modem_setCallback(ThingstreamTransport* self, ThingstreamModemCallback_t callback, void* cookie)
 {
     CustomModemState* state = (CustomModemState*)self->_state;
     state->callback.modem = callback;
     state->callback.mcookie = cookie;
 }
 
-
-/**
- * Clear the function that will be called when the transport layer receive an
- * unrecognized response.
- * Note that calling this will indicate to the stack that the client no longer
- * wishes to accept unrecognized responses from the modem.
- * @param self the Transport instance of this custom modem
- */
-void Modem_clear_modem_callback(Transport* self)
-{
-    CustomModemState* state = (CustomModemState*)self->_state;
-    state->callback.modem = NULL;
-}
-
 /**
  * Send the line to the modem and wait for an OK response.
  *
- * @param self the Transport instance of this custom modem
+ * @param self the #ThingstreamTransport instance of this custom modem
  * @param line a null-terminated line to send to the modem
  * @param millis the maximum number of milliseconds to run
- * @return an integer status code (success / fail)
+ * @return a #ThingstreamTransportResult status code (success / fail)
  */
-TransportResult Modem_send_line(Transport* self, const char* line, uint32_t millis)
+ThingstreamTransportResult Thingstream_Modem_sendLine(ThingstreamTransport* self, const char* line, uint32_t millis)
 {
-    TransportResult tRes = TRANSPORT_SUCCESS;
+    ThingstreamTransportResult tRes = TRANSPORT_SUCCESS;
     CustomModemState* state = (CustomModemState*)self->_state;
 
     /* TODO:
