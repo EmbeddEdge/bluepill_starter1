@@ -85,6 +85,9 @@ void readUserInput(void);
 void readUserInputByByte(void);
 void blinkThread(void const *argument);
 void UARTThread(void const *argument);
+
+osMessageQDef(MsgBox, 5, uint16_t); // Define message queue
+osMessageQId  MsgBox;
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -110,6 +113,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
+  RetargetInit(&huart1);
 
   /* USER CODE END Init */
 
@@ -154,9 +158,10 @@ int main(void)
   osThreadDef(blink, blinkThread, osPriorityNormal, 0, 100);
   osThreadCreate(osThread(blink), NULL);
 
-  osThreadDef(uart, UARTThread, osPriorityAboveNormal, 0, 100);
+  osThreadDef(uart, UARTThread, osPriorityNormal, 0, 300);
   osThreadCreate(osThread(uart), NULL);
-  // A comment
+
+  MsgBox = osMessageCreate(osMessageQ(MsgBox), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -180,22 +185,38 @@ int main(void)
 }
 
 /* USER CODE BEGIN 3 */
-void blinkThread(void const *argument) 
-{
-  while(1) 
-  {
+void blinkThread(void const *argument) {
+  uint16_t delay = 500; /* Default delay */
+  osEvent evt;
+
+  while(1) {
+    evt = osMessageGet(MsgBox, 1);
+    if(evt.status == osEventMessage)
+      delay = evt.value.v;
+
     HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_9);
-    osDelay(500);
+    osDelay(delay);
   }
 }
 
-void UARTThread(void const *argument) 
-{
-  while(1) 
-  {
-    HAL_UART_Transmit(&huart1, "UARTThread\r\n", strlen("UARTThread\r\n"), HAL_MAX_DELAY);
+void UARTThread(void const *argument) {
+  uint16_t delay = 0;
+
+  while(1) {
+    printf("Specify the LD2 LED blink period: ");
+    scanf("%hu", &delay);
+    printf("\r\nSpecified period: %hu\n\r", delay);
+    osMessagePut(MsgBox, delay, osWaitForever);
   }
 }
+
+#ifdef DEBUG
+
+void vApplicationStackOverflowHook( xTaskHandle *pxTask, signed portCHAR *pcTaskName ) {
+  asm("BKPT #0");
+}
+
+#endif
 
 uint8_t UART_Transmit(UART_HandleTypeDef *huart, uint8_t *pData, uint16_t len) {
   if(HAL_UART_Transmit_IT(huart, pData, len) != HAL_OK) {

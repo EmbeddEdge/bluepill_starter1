@@ -36,6 +36,7 @@ extern "C" {
 #include <string.h>
 #include <stdlib.h>
 #include "ringbuffer.h"
+#include <retarget.h>
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/

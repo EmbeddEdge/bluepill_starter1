@@ -7,7 +7,7 @@
 #include <signal.h>
 #include "retarget.h"
 #include <stdint.h>
-/*
+
 #if !defined(OS_USE_SEMIHOSTING) && !defined(RETARGET_TCP)
 
 #define STDIN_FILENO  0
@@ -19,8 +19,8 @@ UART_HandleTypeDef *gHuart;
 void RetargetInit(UART_HandleTypeDef *huart) {
   gHuart = huart;
 
-   Disable I/O buffering for STDOUT stream, so that
-   * chars are sent out as soon as they are printed. *//*
+  /* Disable I/O buffering for STDOUT stream, so that
+   * chars are sent out as soon as they are printed. */
   setvbuf(stdout, NULL, _IONBF, 0);
 }
 
@@ -88,4 +88,4 @@ int _fstat(int fd, struct stat* st) {
 }
 
 #endif //#if !defined(OS_USE_SEMIHOSTING)
-*/
+

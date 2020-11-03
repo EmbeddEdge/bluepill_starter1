@@ -11,7 +11,7 @@
 **
 **  Environment : System Workbench for MCU
 **
-**  Distribution: The file is distributed “as is,” without any warranty
+**  Distribution: The file is distributed ï¿½as is,ï¿½ without any warranty
 **                of any kind.
 **
 *****************************************************************************
@@ -53,6 +53,7 @@
 #include <sys/time.h>
 #include <sys/times.h>
 
+/*
 
 /* Variables */
 //#undef errno
@@ -133,7 +134,7 @@ caddr_t _sbrk(int incr)
 
 	return (caddr_t) prev_heap_end;
 }
-
+/*
 int _close(int file)
 {
 	return -1;
@@ -155,7 +156,7 @@ int _lseek(int file, int ptr, int dir)
 {
 	return 0;
 }
-
+*/
 int _open(char *path, int flags, ...)
 {
 	/* Pretend like we always fail */
