@@ -47,14 +47,13 @@
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
 RTC_HandleTypeDef hrtc;
-
+PCD_HandleTypeDef hpcd_USB_FS;
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
-
-PCD_HandleTypeDef hpcd_USB_FS;
+DMA_HandleTypeDef hdma_usart1_tx;
+char *msg = "Hello STM32 Lovers! This message is being passed through in DMA mode. \r\n"; 
 
 char readBuf[4];
-//char dispBuf[LINEMAX];
 char dispBuf[LINEMAX + 1]; // Holding buffer with space for terminating NUL
 volatile int lineValid = 0;
 uint8_t txData;
@@ -111,34 +110,45 @@ int main(void)
   /* USER CODE END SysInit */
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_RTC_Init();
-  MX_USB_PCD_Init();
+  //MX_RTC_Init();
+  //MX_USB_PCD_Init();
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
+
   /* USER CODE BEGIN 2 */
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA1_CLK_ENABLE();
+
+  hdma_usart1_tx.Instance = DMA1_Channel4;
+  hdma_usart1_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;
+  hdma_usart1_tx.Init.PeriphInc = DMA_PINC_DISABLE;
+  hdma_usart1_tx.Init.MemInc = DMA_MINC_ENABLE;
+  hdma_usart1_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+  hdma_usart1_tx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
+  hdma_usart1_tx.Init.Mode = DMA_NORMAL; 
+  hdma_usart1_tx.Init.Priority = DMA_PRIORITY_LOW;
+  HAL_DMA_Init(&hdma_usart1_tx);
+
+  HAL_DMA_Start(&hdma_usart1_tx, (uint32_t)msg, (uint32_t)&huart1.Instance->DR, strlen(msg));
+  //Enable UART in DMA mode
+  huart1.Instance->CR3 |= USART_CR3_DMAT;
+  //Wait for transfer complete
+  HAL_DMA_PollForTransfer(&hdma_usart1_tx, HAL_DMA_FULL_TRANSFER, HAL_MAX_DELAY);
+  //Disable UART DMA mode 
+  huart1.Instance->CR3 &= ~USART_CR3_DMAT;
+  //Turn on the Led
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_SET);
+
 
   /* USER CODE END 2 */
-
-  /* Enable USART2 interrupt */
-  HAL_NVIC_SetPriority(USART2_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(USART2_IRQn);
-
-
 
 printMessage:
 
   printWelcomeMessage();
 
-  while (1)  {
-    readUserInput();
+  while (1)  
+  {
 
-    err = processUserInput();
-    if(err == 2)
-    {
-      goto printMessage;
-    }
-    performCriticalTasks();
-    HAL_UART_ErrorCallback(&huart2);
   }
 }
 
