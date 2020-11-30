@@ -51,7 +51,7 @@ PCD_HandleTypeDef hpcd_USB_FS;
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
 DMA_HandleTypeDef hdma_usart1_tx;
-char *msg = "Hello STM32 Lovers! This message is being passed through in DMA mode. \r\n"; 
+char *msg = "Hello STM32 Lovers! This message is being passed in DMA mode with interrupts. \r\n"; 
 
 char readBuf[4];
 char dispBuf[LINEMAX + 1]; // Holding buffer with space for terminating NUL
@@ -77,6 +77,7 @@ uint8_t processUserInput(void);
 void clearRxBuffer(void);
 void readUserInput(void);
 void readUserInputByByte(void);
+void DMATransferComplete(DMA_HandleTypeDef *hdma);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -127,18 +128,16 @@ int main(void)
   hdma_usart1_tx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
   hdma_usart1_tx.Init.Mode = DMA_NORMAL; 
   hdma_usart1_tx.Init.Priority = DMA_PRIORITY_LOW;
+  hdma_usart1_tx.XferCpltCallback = &DMATransferComplete;
   HAL_DMA_Init(&hdma_usart1_tx);
 
-  HAL_DMA_Start(&hdma_usart1_tx, (uint32_t)msg, (uint32_t)&huart1.Instance->DR, strlen(msg));
+  // DMA interrupt init
+  HAL_NVIC_SetPriority(DMA1_Channel4_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel4_IRQn);
+
+  HAL_DMA_Start_IT(&hdma_usart1_tx, (uint32_t)msg, (uint32_t)&huart1.Instance->DR, strlen(msg));
   //Enable UART in DMA mode
   huart1.Instance->CR3 |= USART_CR3_DMAT;
-  //Wait for transfer complete
-  HAL_DMA_PollForTransfer(&hdma_usart1_tx, HAL_DMA_FULL_TRANSFER, HAL_MAX_DELAY);
-  //Disable UART DMA mode 
-  huart1.Instance->CR3 &= ~USART_CR3_DMAT;
-  //Turn on the Led
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_SET);
-
 
   /* USER CODE END 2 */
 
@@ -212,6 +211,17 @@ void readUserInputByByte() {
     }
   }
   //return retVal;
+}
+
+void DMATransferComplete(DMA_HandleTypeDef *hdma)
+{
+  if(hdma->Instance == DMA1_Channel4)
+  {
+    //Disable UART DMA mode 
+    huart1.Instance->CR3 &= ~USART_CR3_DMAT;
+    //Turn on the Led
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, GPIO_PIN_SET);
+  }
 }
 
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)

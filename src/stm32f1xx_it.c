@@ -59,6 +59,7 @@
 
 /* External variables --------------------------------------------------------*/
 extern UART_HandleTypeDef huart2;
+extern DMA_HandleTypeDef hdma_usart1_tx;
 
 /* USER CODE BEGIN EV */
 
@@ -216,6 +217,21 @@ void USART2_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
+
+void DMA1_Channel4_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA1_Stream6_IRQn 0 */
+
+  /* USER CODE END DMA1_Stream6_IRQn 0 */
+#ifdef UART_RX
+  HAL_DMA_IRQHandler(&hdma_usart1_rx);
+#elif !defined(MEM2MEM)
+  HAL_DMA_IRQHandler(&hdma_usart1_tx);
+#endif
+  /* USER CODE BEGIN DMA1_Stream6_IRQn 1 */
+
+  /* USER CODE END DMA1_Stream6_IRQn 1 */
+}
 
 /* USER CODE END 1 */
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
